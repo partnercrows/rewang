@@ -1,12 +1,12 @@
-import { createFileRoute, Navigate } from "@tanstack/react-router";
+import { createFileRoute, Navigate, Outlet } from "@tanstack/react-router";
 import { useAuth } from "@/hooks/useAuth";
 import { Loader2 } from "lucide-react";
 
-export const Route = createFileRoute("/")({
-  component: Index,
+export const Route = createFileRoute("/app")({
+  component: AppLayout,
 });
 
-function Index() {
+function AppLayout() {
   const { loading, session, profile } = useAuth();
   if (loading) {
     return (
@@ -17,5 +17,5 @@ function Index() {
   }
   if (!session) return <Navigate to="/login" replace />;
   if (!profile?.family_id) return <Navigate to="/onboarding" replace />;
-  return <Navigate to="/app" replace />;
+  return <Outlet />;
 }

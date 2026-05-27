@@ -1,0 +1,168 @@
+import { createFileRoute, Navigate, useNavigate } from "@tanstack/react-router";
+import { useState } from "react";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { generateInviteCode } from "@/lib/utils";
+import { toast } from "sonner";
+import { Home, Loader2, Users, Plus } from "lucide-react";
+
+export const Route = createFileRoute("/onboarding")({
+  head: () => ({ meta: [{ title: "Mulai — Rumahku" }] }),
+  component: OnboardingPage,
+});
+
+function OnboardingPage() {
+  const navigate = useNavigate();
+  const { session, profile, loading, refresh } = useAuth();
+  const [mode, setMode] = useState<"choose" | "create" | "join">("choose");
+  const [familyName, setFamilyName] = useState("");
+  const [inviteCode, setInviteCode] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+      </div>
+    );
+  }
+  if (!session) return <Navigate to="/login" replace />;
+  if (profile?.family_id) return <Navigate to="/app" replace />;
+
+  const handleCreate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setBusy(true);
+    const invite_code = generateInviteCode();
+    const { data: fam, error } = await supabase
+      .from("families")
+      .insert({ family_name: familyName, invite_code })
+      .select()
+      .single();
+    if (error || !fam) {
+      setBusy(false);
+      return toast.error(error?.message ?? "Gagal membuat keluarga");
+    }
+    const { error: updErr } = await supabase
+      .from("profiles")
+      .update({ family_id: fam.id })
+      .eq("id", session.user.id);
+    if (updErr) {
+      setBusy(false);
+      return toast.error(updErr.message);
+    }
+    await refresh();
+    toast.success(`Keluarga "${familyName}" dibuat!`);
+    navigate({ to: "/app" });
+  };
+
+  const handleJoin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setBusy(true);
+    const code = inviteCode.trim().toUpperCase();
+    const { data: fam, error } = await supabase
+      .from("families")
+      .select("id")
+      .eq("invite_code", code)
+      .is("deleted_at", null)
+      .maybeSingle();
+    if (error || !fam) {
+      setBusy(false);
+      return toast.error("Kode undangan tidak ditemukan");
+    }
+    const { error: updErr } = await supabase
+      .from("profiles")
+      .update({ family_id: fam.id })
+      .eq("id", session.user.id);
+    if (updErr) {
+      setBusy(false);
+      return toast.error(updErr.message);
+    }
+    await refresh();
+    toast.success("Bergabung ke keluarga!");
+    navigate({ to: "/app" });
+  };
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-secondary/40 to-accent/30 p-4">
+      <div className="w-full max-w-md">
+        <div className="text-center mb-8">
+          <div className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-soft mb-3">
+            <Home className="h-7 w-7" />
+          </div>
+          <h1 className="text-3xl font-bold tracking-tight">Halo, {profile?.full_name?.split(" ")[0]} 👋</h1>
+          <p className="text-muted-foreground mt-1 text-sm">Mulai dengan membuat atau bergabung ke keluarga.</p>
+        </div>
+
+        {mode === "choose" && (
+          <div className="grid gap-3">
+            <button
+              onClick={() => setMode("create")}
+              className="bg-card border border-border rounded-2xl p-5 text-left shadow-soft hover:shadow-card transition group"
+            >
+              <div className="flex items-center gap-3">
+                <div className="h-12 w-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center group-hover:bg-primary group-hover:text-primary-foreground transition">
+                  <Plus className="h-6 w-6" />
+                </div>
+                <div>
+                  <h3 className="font-semibold">Buat keluarga baru</h3>
+                  <p className="text-sm text-muted-foreground">Mulai grup rumah tangga Anda</p>
+                </div>
+              </div>
+            </button>
+            <button
+              onClick={() => setMode("join")}
+              className="bg-card border border-border rounded-2xl p-5 text-left shadow-soft hover:shadow-card transition group"
+            >
+              <div className="flex items-center gap-3">
+                <div className="h-12 w-12 rounded-xl bg-accent text-accent-foreground flex items-center justify-center">
+                  <Users className="h-6 w-6" />
+                </div>
+                <div>
+                  <h3 className="font-semibold">Gabung dengan kode</h3>
+                  <p className="text-sm text-muted-foreground">Masuk ke keluarga yang sudah ada</p>
+                </div>
+              </div>
+            </button>
+          </div>
+        )}
+
+        {mode === "create" && (
+          <form onSubmit={handleCreate} className="bg-card border border-border rounded-2xl p-6 shadow-card space-y-3">
+            <Label htmlFor="fname">Nama keluarga</Label>
+            <Input id="fname" required value={familyName} onChange={(e) => setFamilyName(e.target.value)} placeholder="Keluarga Wijaya" />
+            <div className="flex gap-2 pt-2">
+              <Button type="button" variant="ghost" onClick={() => setMode("choose")}>Batal</Button>
+              <Button type="submit" className="flex-1" disabled={busy}>
+                {busy && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Buat
+              </Button>
+            </div>
+          </form>
+        )}
+
+        {mode === "join" && (
+          <form onSubmit={handleJoin} className="bg-card border border-border rounded-2xl p-6 shadow-card space-y-3">
+            <Label htmlFor="code">Kode undangan</Label>
+            <Input
+              id="code"
+              required
+              value={inviteCode}
+              onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
+              placeholder="ABC123"
+              className="text-center text-lg tracking-widest font-mono"
+              maxLength={10}
+            />
+            <div className="flex gap-2 pt-2">
+              <Button type="button" variant="ghost" onClick={() => setMode("choose")}>Batal</Button>
+              <Button type="submit" className="flex-1" disabled={busy}>
+                {busy && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Gabung
+              </Button>
+            </div>
+          </form>
+        )}
+      </div>
+    </div>
+  );
+}
