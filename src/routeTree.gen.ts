@@ -14,6 +14,11 @@ import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AppRouteImport } from './routes/app'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AppIndexRouteImport } from './routes/app.index'
+import { Route as AppKeuanganRouteImport } from './routes/app.keuangan'
+import { Route as AppFeedRouteImport } from './routes/app.feed'
+import { Route as AppBelanjaRouteImport } from './routes/app.belanja'
+import { Route as AppAkunRouteImport } from './routes/app.akun'
 
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
@@ -40,40 +45,109 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AppIndexRoute = AppIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppKeuanganRoute = AppKeuanganRouteImport.update({
+  id: '/keuangan',
+  path: '/keuangan',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppFeedRoute = AppFeedRouteImport.update({
+  id: '/feed',
+  path: '/feed',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppBelanjaRoute = AppBelanjaRouteImport.update({
+  id: '/belanja',
+  path: '/belanja',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAkunRoute = AppAkunRouteImport.update({
+  id: '/akun',
+  path: '/akun',
+  getParentRoute: () => AppRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/app': typeof AppRoute
+  '/app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
   '/signup': typeof SignupRoute
+  '/app/akun': typeof AppAkunRoute
+  '/app/belanja': typeof AppBelanjaRoute
+  '/app/feed': typeof AppFeedRoute
+  '/app/keuangan': typeof AppKeuanganRoute
+  '/app/': typeof AppIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/app': typeof AppRoute
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
   '/signup': typeof SignupRoute
+  '/app/akun': typeof AppAkunRoute
+  '/app/belanja': typeof AppBelanjaRoute
+  '/app/feed': typeof AppFeedRoute
+  '/app/keuangan': typeof AppKeuanganRoute
+  '/app': typeof AppIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/app': typeof AppRoute
+  '/app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
   '/signup': typeof SignupRoute
+  '/app/akun': typeof AppAkunRoute
+  '/app/belanja': typeof AppBelanjaRoute
+  '/app/feed': typeof AppFeedRoute
+  '/app/keuangan': typeof AppKeuanganRoute
+  '/app/': typeof AppIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/app' | '/login' | '/onboarding' | '/signup'
+  fullPaths:
+    | '/'
+    | '/app'
+    | '/login'
+    | '/onboarding'
+    | '/signup'
+    | '/app/akun'
+    | '/app/belanja'
+    | '/app/feed'
+    | '/app/keuangan'
+    | '/app/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/app' | '/login' | '/onboarding' | '/signup'
-  id: '__root__' | '/' | '/app' | '/login' | '/onboarding' | '/signup'
+  to:
+    | '/'
+    | '/login'
+    | '/onboarding'
+    | '/signup'
+    | '/app/akun'
+    | '/app/belanja'
+    | '/app/feed'
+    | '/app/keuangan'
+    | '/app'
+  id:
+    | '__root__'
+    | '/'
+    | '/app'
+    | '/login'
+    | '/onboarding'
+    | '/signup'
+    | '/app/akun'
+    | '/app/belanja'
+    | '/app/feed'
+    | '/app/keuangan'
+    | '/app/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AppRoute: typeof AppRoute
+  AppRoute: typeof AppRouteWithChildren
   LoginRoute: typeof LoginRoute
   OnboardingRoute: typeof OnboardingRoute
   SignupRoute: typeof SignupRoute
@@ -116,12 +190,65 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/app/': {
+      id: '/app/'
+      path: '/'
+      fullPath: '/app/'
+      preLoaderRoute: typeof AppIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/keuangan': {
+      id: '/app/keuangan'
+      path: '/keuangan'
+      fullPath: '/app/keuangan'
+      preLoaderRoute: typeof AppKeuanganRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/feed': {
+      id: '/app/feed'
+      path: '/feed'
+      fullPath: '/app/feed'
+      preLoaderRoute: typeof AppFeedRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/belanja': {
+      id: '/app/belanja'
+      path: '/belanja'
+      fullPath: '/app/belanja'
+      preLoaderRoute: typeof AppBelanjaRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/akun': {
+      id: '/app/akun'
+      path: '/akun'
+      fullPath: '/app/akun'
+      preLoaderRoute: typeof AppAkunRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
+interface AppRouteChildren {
+  AppAkunRoute: typeof AppAkunRoute
+  AppBelanjaRoute: typeof AppBelanjaRoute
+  AppFeedRoute: typeof AppFeedRoute
+  AppKeuanganRoute: typeof AppKeuanganRoute
+  AppIndexRoute: typeof AppIndexRoute
+}
+
+const AppRouteChildren: AppRouteChildren = {
+  AppAkunRoute: AppAkunRoute,
+  AppBelanjaRoute: AppBelanjaRoute,
+  AppFeedRoute: AppFeedRoute,
+  AppKeuanganRoute: AppKeuanganRoute,
+  AppIndexRoute: AppIndexRoute,
+}
+
+const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  AppRoute: AppRoute,
+  AppRoute: AppRouteWithChildren,
   LoginRoute: LoginRoute,
   OnboardingRoute: OnboardingRoute,
   SignupRoute: SignupRoute,
