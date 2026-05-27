@@ -14,13 +14,391 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      activity_feed: {
+        Row: {
+          action_type: string
+          actor_id: string | null
+          actor_name: string | null
+          created_at: string
+          deleted_at: string | null
+          description: string
+          entity_type: string
+          family_id: string
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          action_type: string
+          actor_id?: string | null
+          actor_name?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          description: string
+          entity_type: string
+          family_id: string
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          action_type?: string
+          actor_id?: string | null
+          actor_name?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          description?: string
+          entity_type?: string
+          family_id?: string
+          id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activity_feed_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "activity_feed_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bills: {
+        Row: {
+          bill_name: string
+          created_at: string
+          deleted_at: string | null
+          due_date: string
+          family_id: string
+          google_calendar_event_id: string | null
+          id: string
+          is_paid: boolean
+          is_recurring: boolean
+          nominal: number
+          recurrence_interval: string | null
+          updated_at: string
+        }
+        Insert: {
+          bill_name: string
+          created_at?: string
+          deleted_at?: string | null
+          due_date: string
+          family_id: string
+          google_calendar_event_id?: string | null
+          id?: string
+          is_paid?: boolean
+          is_recurring?: boolean
+          nominal: number
+          recurrence_interval?: string | null
+          updated_at?: string
+        }
+        Update: {
+          bill_name?: string
+          created_at?: string
+          deleted_at?: string | null
+          due_date?: string
+          family_id?: string
+          google_calendar_event_id?: string | null
+          id?: string
+          is_paid?: boolean
+          is_recurring?: boolean
+          nominal?: number
+          recurrence_interval?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bills_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      debts_credits: {
+        Row: {
+          address: string | null
+          created_at: string
+          deleted_at: string | null
+          family_id: string
+          id: string
+          monthly_installment: number
+          person_name: string
+          phone_number: string | null
+          proof_image_url: string | null
+          start_date: string
+          total_amount: number
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          family_id: string
+          id?: string
+          monthly_installment?: number
+          person_name: string
+          phone_number?: string | null
+          proof_image_url?: string | null
+          start_date: string
+          total_amount: number
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          family_id?: string
+          id?: string
+          monthly_installment?: number
+          person_name?: string
+          phone_number?: string | null
+          proof_image_url?: string | null
+          start_date?: string
+          total_amount?: number
+          type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "debts_credits_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      families: {
+        Row: {
+          created_at: string
+          deleted_at: string | null
+          family_name: string
+          id: string
+          invite_code: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          deleted_at?: string | null
+          family_name: string
+          id?: string
+          invite_code: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          deleted_at?: string | null
+          family_name?: string
+          id?: string
+          invite_code?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      installment_logs: {
+        Row: {
+          amount_paid: number
+          created_at: string
+          debt_credit_id: string
+          deleted_at: string | null
+          id: string
+          installment_number: number
+          payment_date: string
+          updated_at: string
+        }
+        Insert: {
+          amount_paid: number
+          created_at?: string
+          debt_credit_id: string
+          deleted_at?: string | null
+          id?: string
+          installment_number: number
+          payment_date: string
+          updated_at?: string
+        }
+        Update: {
+          amount_paid?: number
+          created_at?: string
+          debt_credit_id?: string
+          deleted_at?: string | null
+          id?: string
+          installment_number?: number
+          payment_date?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "installment_logs_debt_credit_id_fkey"
+            columns: ["debt_credit_id"]
+            isOneToOne: false
+            referencedRelation: "debts_credits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      kanban_boards: {
+        Row: {
+          assigned_pic_id: string | null
+          category: string | null
+          created_at: string
+          deleted_at: string | null
+          description: string | null
+          family_id: string
+          id: string
+          status: string
+          target_date: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_pic_id?: string | null
+          category?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          description?: string | null
+          family_id: string
+          id?: string
+          status?: string
+          target_date?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_pic_id?: string | null
+          category?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          description?: string | null
+          family_id?: string
+          id?: string
+          status?: string
+          target_date?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kanban_boards_assigned_pic_id_fkey"
+            columns: ["assigned_pic_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kanban_boards_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          deleted_at: string | null
+          email: string
+          family_id: string | null
+          full_name: string
+          id: string
+          phone_number: string | null
+          updated_at: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          email: string
+          family_id?: string | null
+          full_name: string
+          id: string
+          phone_number?: string | null
+          updated_at?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          email?: string
+          family_id?: string | null
+          full_name?: string
+          id?: string
+          phone_number?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shopping_items: {
+        Row: {
+          category: string
+          created_at: string
+          current_stock: number
+          deleted_at: string | null
+          family_id: string
+          id: string
+          item_name: string
+          min_stock: number
+          status: string | null
+          updated_at: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          current_stock?: number
+          deleted_at?: string | null
+          family_id: string
+          id?: string
+          item_name: string
+          min_stock?: number
+          status?: string | null
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          current_stock?: number
+          deleted_at?: string | null
+          family_id?: string
+          id?: string
+          item_name?: string
+          min_stock?: number
+          status?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shopping_items_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      current_family_id: { Args: never; Returns: string }
     }
     Enums: {
       [_ in never]: never
