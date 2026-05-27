@@ -2,13 +2,13 @@ import { Link, useRouterState } from "@tanstack/react-router";
 import { Home, ShoppingBasket, Wallet, Activity, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const tabs = [
+const tabs: Array<{ to: string; label: string; icon: typeof Home; exact?: boolean }> = [
   { to: "/app", label: "Beranda", icon: Home, exact: true },
   { to: "/app/belanja", label: "Belanja", icon: ShoppingBasket },
   { to: "/app/keuangan", label: "Keuangan", icon: Wallet },
   { to: "/app/feed", label: "Feed", icon: Activity },
   { to: "/app/akun", label: "Akun", icon: User },
-] as const;
+];
 
 export function BottomNavbar() {
   const { location } = useRouterState();
