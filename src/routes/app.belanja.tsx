@@ -183,7 +183,7 @@ function StockTab() {
                   </div>
                   <p className="text-[11px] text-muted-foreground">{item.category} · min {item.min_stock} {item.unit}</p>
                   {item.last_updated_by_name && (
-                    <p className="text-[10px] text-muted-foreground mt-0.5">Diupdate oleh {item.last_updated_by_name} · {formatDistanceToNow(item.updated_at)}</p>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">Diupdate oleh {item.last_updated_by_name} · {formatDistanceToNow(new Date(item.updated_at), { addSuffix: true, locale: idLocale })}</p>
                   )}
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
