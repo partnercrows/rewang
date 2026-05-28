@@ -305,7 +305,5 @@ function HighlightsCard({ stats }: { stats: any }) {
 }
 
 function KanbanWrap({ familyId }: { familyId: string }) {
-  // lazy import via dynamic — keep simple inline import
-  const { KanbanBoard } = require("@/components/kanban/KanbanBoard");
   return <KanbanBoard familyId={familyId} />;
 }
