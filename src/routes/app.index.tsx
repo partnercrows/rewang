@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { formatRupiah, daysUntil, initials } from "@/lib/utils";
 import { ShoppingBasket, Wallet, ReceiptText, TrendingDown, Calendar, Pin, Trash2, Cake, BookOpen, GraduationCap, BellRing, Sparkles, CheckCircle2 } from "lucide-react";
 import { QuickAddSheet } from "@/components/home/QuickAddSheet";
+import { KanbanBoard } from "@/components/kanban/KanbanBoard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
