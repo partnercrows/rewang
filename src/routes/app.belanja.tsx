@@ -13,7 +13,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Plus, Trash2, Minus, Search, Edit2, ShoppingCart, Star, Package } from "lucide-react";
 import { useState, useMemo } from "react";
 import { toast } from "sonner";
-import { cn, formatRupiah, formatDistanceToNow } from "@/lib/utils";
+import { cn, formatRupiah } from "@/lib/utils";
+import { formatDistanceToNow } from "date-fns";
+import { id as idLocale } from "date-fns/locale";
 
 export const Route = createFileRoute("/app/belanja")({
   head: () => ({ meta: [{ title: "Belanja — Rewang" }] }),
