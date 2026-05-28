@@ -1,0 +1,1 @@
+GRANT EXECUTE ON FUNCTION public.current_family_id() TO authenticated, anon, service_role;
