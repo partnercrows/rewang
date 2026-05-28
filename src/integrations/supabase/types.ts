@@ -68,9 +68,88 @@ export type Database = {
           },
         ]
       }
+      agenda_events: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          event_date: string
+          event_type: string
+          family_id: string
+          id: string
+          notes: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          event_date: string
+          event_type?: string
+          family_id: string
+          id?: string
+          notes?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          event_date?: string
+          event_type?: string
+          family_id?: string
+          id?: string
+          notes?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      bill_payments: {
+        Row: {
+          amount: number
+          bill_id: string
+          created_at: string
+          deleted_at: string | null
+          family_id: string
+          id: string
+          notes: string | null
+          paid_at: string
+          paid_by: string | null
+          paid_by_name: string | null
+        }
+        Insert: {
+          amount: number
+          bill_id: string
+          created_at?: string
+          deleted_at?: string | null
+          family_id: string
+          id?: string
+          notes?: string | null
+          paid_at?: string
+          paid_by?: string | null
+          paid_by_name?: string | null
+        }
+        Update: {
+          amount?: number
+          bill_id?: string
+          created_at?: string
+          deleted_at?: string | null
+          family_id?: string
+          id?: string
+          notes?: string | null
+          paid_at?: string
+          paid_by?: string | null
+          paid_by_name?: string | null
+        }
+        Relationships: []
+      }
       bills: {
         Row: {
           bill_name: string
+          bill_type: string | null
           created_at: string
           deleted_at: string | null
           due_date: string
@@ -80,11 +159,15 @@ export type Database = {
           is_paid: boolean
           is_recurring: boolean
           nominal: number
+          notes: string | null
+          paid_at: string | null
           recurrence_interval: string | null
+          reminder_days: number | null
           updated_at: string
         }
         Insert: {
           bill_name: string
+          bill_type?: string | null
           created_at?: string
           deleted_at?: string | null
           due_date: string
@@ -94,11 +177,15 @@ export type Database = {
           is_paid?: boolean
           is_recurring?: boolean
           nominal: number
+          notes?: string | null
+          paid_at?: string | null
           recurrence_interval?: string | null
+          reminder_days?: number | null
           updated_at?: string
         }
         Update: {
           bill_name?: string
+          bill_type?: string | null
           created_at?: string
           deleted_at?: string | null
           due_date?: string
@@ -108,7 +195,10 @@ export type Database = {
           is_paid?: boolean
           is_recurring?: boolean
           nominal?: number
+          notes?: string | null
+          paid_at?: string | null
           recurrence_interval?: string | null
+          reminder_days?: number | null
           updated_at?: string
         }
         Relationships: [
@@ -177,6 +267,42 @@ export type Database = {
           },
         ]
       }
+      emergency_contacts: {
+        Row: {
+          category: string
+          created_at: string
+          deleted_at: string | null
+          family_id: string
+          id: string
+          name: string
+          notes: string | null
+          phone: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          deleted_at?: string | null
+          family_id: string
+          id?: string
+          name: string
+          notes?: string | null
+          phone: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          deleted_at?: string | null
+          family_id?: string
+          id?: string
+          name?: string
+          notes?: string | null
+          phone?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       families: {
         Row: {
           created_at: string
@@ -200,6 +326,42 @@ export type Database = {
           family_name?: string
           id?: string
           invite_code?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      household_documents: {
+        Row: {
+          category: string
+          created_at: string
+          deleted_at: string | null
+          drive_url: string | null
+          family_id: string
+          id: string
+          notes: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          deleted_at?: string | null
+          drive_url?: string | null
+          family_id: string
+          id?: string
+          notes?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          deleted_at?: string | null
+          drive_url?: string | null
+          family_id?: string
+          id?: string
+          notes?: string | null
+          title?: string
           updated_at?: string
         }
         Relationships: []
@@ -312,6 +474,7 @@ export type Database = {
           full_name: string
           id: string
           phone_number: string | null
+          role: string
           updated_at: string
         }
         Insert: {
@@ -323,6 +486,7 @@ export type Database = {
           full_name: string
           id: string
           phone_number?: string | null
+          role?: string
           updated_at?: string
         }
         Update: {
@@ -334,6 +498,7 @@ export type Database = {
           full_name?: string
           id?: string
           phone_number?: string | null
+          role?: string
           updated_at?: string
         }
         Relationships: [
@@ -346,6 +511,72 @@ export type Database = {
           },
         ]
       }
+      quick_notes: {
+        Row: {
+          content: string
+          created_at: string
+          created_by: string | null
+          created_by_name: string | null
+          deleted_at: string | null
+          family_id: string
+          id: string
+          is_pinned: boolean
+          updated_at: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          created_by?: string | null
+          created_by_name?: string | null
+          deleted_at?: string | null
+          family_id: string
+          id?: string
+          is_pinned?: boolean
+          updated_at?: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          created_by?: string | null
+          created_by_name?: string | null
+          deleted_at?: string | null
+          family_id?: string
+          id?: string
+          is_pinned?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      shopping_categories: {
+        Row: {
+          color: string | null
+          created_at: string
+          deleted_at: string | null
+          family_id: string
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          family_id: string
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          family_id?: string
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       shopping_items: {
         Row: {
           category: string
@@ -355,8 +586,12 @@ export type Database = {
           family_id: string
           id: string
           item_name: string
+          last_updated_by: string | null
+          last_updated_by_name: string | null
           min_stock: number
+          quantity_decimal: number | null
           status: string | null
+          unit: string | null
           updated_at: string
         }
         Insert: {
@@ -367,8 +602,12 @@ export type Database = {
           family_id: string
           id?: string
           item_name: string
+          last_updated_by?: string | null
+          last_updated_by_name?: string | null
           min_stock?: number
+          quantity_decimal?: number | null
           status?: string | null
+          unit?: string | null
           updated_at?: string
         }
         Update: {
@@ -379,8 +618,12 @@ export type Database = {
           family_id?: string
           id?: string
           item_name?: string
+          last_updated_by?: string | null
+          last_updated_by_name?: string | null
           min_stock?: number
+          quantity_decimal?: number | null
           status?: string | null
+          unit?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -392,6 +635,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      wishlist_items: {
+        Row: {
+          created_at: string
+          deleted_at: string | null
+          estimated_price: number | null
+          family_id: string
+          id: string
+          item_name: string
+          notes: string | null
+          priority: string
+          purchased_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          deleted_at?: string | null
+          estimated_price?: number | null
+          family_id: string
+          id?: string
+          item_name: string
+          notes?: string | null
+          priority?: string
+          purchased_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          deleted_at?: string | null
+          estimated_price?: number | null
+          family_id?: string
+          id?: string
+          item_name?: string
+          notes?: string | null
+          priority?: string
+          purchased_at?: string | null
+          updated_at?: string
+        }
+        Relationships: []
       }
     }
     Views: {
