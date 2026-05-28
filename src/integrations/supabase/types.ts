@@ -398,7 +398,41 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      create_family: {
+        Args: { _family_name: string; _invite_code: string }
+        Returns: {
+          created_at: string
+          deleted_at: string | null
+          family_name: string
+          id: string
+          invite_code: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "families"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       current_family_id: { Args: never; Returns: string }
+      join_family_by_code: {
+        Args: { _invite_code: string }
+        Returns: {
+          created_at: string
+          deleted_at: string | null
+          family_name: string
+          id: string
+          invite_code: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "families"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
     }
     Enums: {
       [_ in never]: never
