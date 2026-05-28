@@ -36,22 +36,13 @@ function OnboardingPage() {
     e.preventDefault();
     setBusy(true);
     const invite_code = generateInviteCode();
-    const { data: fam, error } = await supabase
-      .from("families")
-      .insert({ family_name: familyName, invite_code })
-      .select()
-      .single();
-    if (error || !fam) {
+    const { error } = await supabase.rpc("create_family", {
+      _family_name: familyName,
+      _invite_code: invite_code,
+    });
+    if (error) {
       setBusy(false);
-      return toast.error(error?.message ?? "Gagal membuat keluarga");
-    }
-    const { error: updErr } = await supabase
-      .from("profiles")
-      .update({ family_id: fam.id })
-      .eq("id", session.user.id);
-    if (updErr) {
-      setBusy(false);
-      return toast.error(updErr.message);
+      return toast.error(error.message ?? "Gagal membuat keluarga");
     }
     await refresh();
     toast.success(`Keluarga "${familyName}" dibuat!`);
@@ -62,23 +53,12 @@ function OnboardingPage() {
     e.preventDefault();
     setBusy(true);
     const code = inviteCode.trim().toUpperCase();
-    const { data: fam, error } = await supabase
-      .from("families")
-      .select("id")
-      .eq("invite_code", code)
-      .is("deleted_at", null)
-      .maybeSingle();
-    if (error || !fam) {
+    const { error } = await supabase.rpc("join_family_by_code", {
+      _invite_code: code,
+    });
+    if (error) {
       setBusy(false);
-      return toast.error("Kode undangan tidak ditemukan");
-    }
-    const { error: updErr } = await supabase
-      .from("profiles")
-      .update({ family_id: fam.id })
-      .eq("id", session.user.id);
-    if (updErr) {
-      setBusy(false);
-      return toast.error(updErr.message);
+      return toast.error(error.message?.includes("not found") ? "Kode undangan tidak ditemukan" : error.message);
     }
     await refresh();
     toast.success("Bergabung ke keluarga!");
