@@ -10,6 +10,7 @@ export type Profile = {
   avatar_url: string | null;
   phone_number: string | null;
   family_id: string | null;
+  role: string | null;
 };
 
 export type Family = {
