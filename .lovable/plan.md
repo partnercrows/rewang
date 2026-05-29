@@ -1,75 +1,53 @@
-# Rewang — Expansion Plan
+# Lanjutan: Beranda, Akun, Keuangan
 
-Skala besar. Saya pecah jadi beberapa migrasi DB + refactor tiap halaman. Saya ringkas inti yang akan dibangun supaya jelas sebelum dieksekusi.
+## 1. Beranda (`src/routes/app.index.tsx`) — refine UI
+Layout sesuai spek:
+- **Header greeting** (sudah ada) — pertahankan, sapaan + avatar
+- **4 summary cards** grid 2x2: stok menipis 📦, tagihan belum bayar 💳, hutang aktif 💸, piutang 🪙. Soft background per kategori (primary/15, warning/15, destructive/10, success/15), rounded-2xl, ikon kecil + judul + angka tebal. Tappable → navigate ke modul terkait
+- **Highlight card "Tagihan Terdekat"** — gradient hijau (primary → primary-glow), nama tagihan kiri + nominal + countdown kanan, tombol Lunasi & Detail
+- **Agenda Bulan Ini** — list ringkas dengan ikon kiri (per event_type) + countdown kanan, tombol "Lihat Kalender" (link ke `/app/akun` agenda section atau modal)
+- **Catatan Rumah** — sticky notes warna warm (bg-accent/secondary), pin/hapus inline, max 4
+- **Pencapaian Rumah** — pills otomatis: "Semua tagihan bulan ini lunas" jika tidak ada unpaid bulan ini, "Tidak ada stok habis minggu ini" jika count habis = 0. Subtle outline pills
+- **FAB Tambah Cepat** (sudah ada `QuickAddSheet`) — tetap
 
-## 1. Database changes (1 migrasi gabungan)
+Hapus KanbanBoard dari home (pindah ke quick add menu saja). Tambahkan link "Lihat Kalender" → arahkan ke section agenda di Akun atau tampilkan modal list semua agenda bulan ini.
 
-Tabel baru (semua punya `family_id`, `deleted_at`, RLS `family_id = current_family_id()`, GRANT authenticated/service_role):
+## 2. Keuangan (`src/routes/app.keuangan.tsx`) — rebuild
+Tabs: **Tagihan** | **Hutang/Piutang**
 
-- **wishlist_items** — item_name, estimated_price, priority (low/med/high), notes, purchased_at
-- **agenda_events** — title, event_date, event_type (ulang_tahun/kajian/janji/sekolah/pengingat), notes
-- **quick_notes** — content, is_pinned, created_by
-- **emergency_contacts** — name, phone, category, notes
-- **household_documents** — title, category (KK/BPJS/STNK/tagihan/sertifikat), drive_url, notes
-- **bill_payments** — bill_id, paid_at, amount (untuk recurring history)
+**Tab Tagihan:**
+- Filter chips: Semua / Belum Bayar / Jatuh Tempo (≤7 hari & belum) / Lunas
+- Card per bill: nama + bill_type badge (warna per jenis), nominal, countdown, recurring badge (🔄), status badge
+- Aksi: Lunasi (insert `bill_payments` + update `is_paid`+`paid_at`; jika recurring → auto buat tagihan baru due_date + interval), Edit, Hapus
+- Tombol "Export PDF Bulanan" → pakai `jspdf` + `jspdf-autotable`, daftar tagihan bulan berjalan
+- Section "History Pembayaran" (collapsible): list `bill_payments` terbaru
 
-Alter tabel existing:
-- `shopping_items`: tambah `unit` (kg/liter/pcs/botol/tabung), `quantity_decimal` numeric (ganti current_stock jadi numeric), `last_updated_by` uuid, `is_wishlist` boolean (atau pisah tabel — pakai tabel terpisah)
-- `bills`: tambah `bill_type` (listrik/internet/air/sekolah/pajak/subscription/lainnya), `notes`, `reminder_days` int, `paid_at` timestamp
-- `debts_credits`: tambah `paid_amount` numeric (computed dari installment_logs sebenarnya)
-- `profiles`: tambah `role` (admin/anggota) — default admin untuk pembuat keluarga
-- Kategori belanja CRUD → tabel `shopping_categories` (family_id, name, color)
+**Tab Hutang/Piutang:**
+- Toggle: Hutang / Piutang
+- Card: nama orang, total, paid (sum installment_logs), progress bar, sisa, tombol "Tambah Cicilan", "WhatsApp" (wa.me/phone), expand history cicilan
+- Form tambah hutang/piutang (sheet)
 
-Functions: trigger update stock status (aman/menipis/habis) saat quantity berubah.
+Komponen baru: `BillCard`, `DebtCard`, `BillTypeBadge`, `InstallmentSheet`.
+Dependencies tambahan: `jspdf`, `jspdf-autotable`.
 
-## 2. Pages
+## 3. Akun (`src/routes/app.akun.tsx`) — rebuild
+Sections (accordion / stacked cards):
+- **Profile**: avatar (upload ke bucket `avatars`, path `${user.id}/avatar.png`), nama, telepon
+- **Keluarga**: invite code besar + copy, list member (`profiles` where family_id) dengan RoleBadge (admin/anggota), admin bisa ubah role member lain
+- **Kontak Darurat** (`emergency_contacts` CRUD): nama, phone, kategori (polisi/pemadam/wifi/rs/saudara/lainnya), notes. Aksi: Call (tel:), WhatsApp (wa.me)
+- **Dokumen Rumah** (`household_documents` CRUD): title, kategori (KK/BPJS/STNK/tagihan/sertifikat/lainnya), drive_url (paste link Google Drive), notes. Group by kategori, klik buka link
+- **Wishlist Shortcut**: card mini → total wishlist + tombol ke `/app/belanja?tab=wishlist`
+- **Pengaturan**: logout, info reminder (placeholder switch)
 
-### `/app` (Home) — rebuild
-- Header: nama + avatar + sapaan waktu (Selamat pagi/siang/sore/malam)
-- Summary cards (2x2): stok menipis, tagihan belum bayar, total hutang, total piutang — clickable
-- Upcoming bill card: nama, nominal, due, countdown, recurring badge, tombol "Lunasi" + "Detail"
-- Family Agenda: 3 agenda terdekat dengan countdown
-- Quick Notes: list catatan, pin/hapus, tambah inline
-- Highlights: badge otomatis ("Semua tagihan lunas bulan ini", "Tidak ada stok habis minggu ini")
-- FAB quick-add: bottom sheet dengan 5 opsi (stok/tagihan/agenda/tugas/catatan)
-
-### `/app/belanja` — tabs Stok + Wishlist
-- Stok: tabs kategori (CRUD kategori), search, filter status, item dengan unit + decimal quantity, +/- quantity, edit modal, last updated info
-- Wishlist: list dengan harga estimasi, prioritas badge, action "beli" → pindah ke stok, hapus
-
-### `/app/keuangan` — tabs Tagihan + Hutang/Piutang
-- Tagihan: filter (semua/belum/jatuh tempo/lunas), badge status, countdown, recurring auto-renewal saat ditandai lunas, edit/delete, tombol export PDF (jsPDF) bulanan
-- Hutang/Piutang: card dengan progress bar % lunas, tombol "Tambah cicilan", history cicilan, WhatsApp shortcut (wa.me), kontak
-
-### `/app/feed`
-- Filter chips: kategori + member + range tanggal
-- Activity sentence ringkas dengan icon kategori
-- Realtime sudah ada, tambah pagination/infinite scroll (limit 50, load more)
-
-### `/app/akun` — rebuild
-- Profile section: avatar upload (Supabase Storage bucket `avatars`), edit nama/phone
-- Family: invite code besar (copy), member list dengan role badge, role change (admin only), remove member
-- Emergency contacts: CRUD list dengan tombol call & WhatsApp
-- Documents: list per kategori dengan link Drive, tambah link
-- Wishlist shortcut card
-- Settings: logout, info reminder
-
-## 3. Komponen baru
-`QuickAddSheet`, `AgendaList`, `QuickNotesCard`, `HighlightsCard`, `WishlistTab`, `BillCard`, `DebtCard`, `EmergencyContactCard`, `DocumentCard`, `RoleBadge`.
-
-## 4. Storage
-Bucket `avatars` (public) untuk upload foto profil.
-
-## 5. Out of scope (akan saya catat tapi tidak dibangun di iterasi ini)
-- Google Drive OAuth integration penuh — pakai link manual dulu
-- Notifikasi push — UI settings saja
-- Export PDF lanjutan (yearly/custom range) — bulanan dulu
-- Email reminder otomatis
+Komponen baru: `EmergencyContactCard`, `DocumentCard`, `RoleBadge`, `AvatarUploader`.
 
 ## Urutan eksekusi
-1. Migrasi DB (1 call) — tunggu approval
-2. Setelah approve: storage bucket avatars + types regen otomatis
-3. Build halaman secara paralel (Home, Belanja, Keuangan, Feed, Akun) + komponen baru
-4. Smoke test build
+1. `bun add jspdf jspdf-autotable`
+2. Rebuild `app.index.tsx` (Beranda baru)
+3. Rebuild `app.keuangan.tsx` + komponen Bill/Debt
+4. Rebuild `app.akun.tsx` + komponen Akun
+5. Smoke test build
 
-Konfirmasi untuk lanjut dengan migrasi DB?
+Tidak ada perubahan database — semua tabel sudah tersedia dari migrasi sebelumnya.
+
+Lanjut eksekusi?
