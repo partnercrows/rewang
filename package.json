@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite dev",
-    "build": "vite build && node -e \"import{renameSync,mkdirSync,existsSync}from'node:fs';if(existsSync('dist/client')){renameSync('dist/client','dist/static')};if(existsSync('dist/server')){mkdirSync('dist/functions',{recursive:true});renameSync('dist/server','dist/functions/__server.func')}\"",
+    "build": "vite build && node scripts/vercel-postbuild.mjs",
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
     "lint": "eslint .",
