@@ -3,15 +3,16 @@ import { MainLayout } from "@/components/layout/MainLayout";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { formatRupiah, daysUntil, initials } from "@/lib/utils";
-import { ShoppingBasket, Wallet, ReceiptText, TrendingDown, Calendar, Pin, Trash2, Cake, BookOpen, GraduationCap, BellRing, Sparkles, CheckCircle2 } from "lucide-react";
+import { formatRupiah, daysUntil, initials, cn } from "@/lib/utils";
+import {
+  Package, ReceiptText, TrendingDown, Coins, Calendar, Pin, Trash2,
+  Cake, BookOpen, GraduationCap, BellRing, Sparkles, CheckCircle2, Trophy, Zap,
+} from "lucide-react";
 import { QuickAddSheet } from "@/components/home/QuickAddSheet";
-import { KanbanBoard } from "@/components/kanban/KanbanBoard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/app/")({
   head: () => ({ meta: [{ title: "Beranda — Rewang" }] }),
@@ -34,17 +35,32 @@ function BerandaPage() {
     queryKey: ["beranda-stats", familyId],
     enabled: !!familyId,
     queryFn: async () => {
-      const [items, bills, debts] = await Promise.all([
+      const monthStart = new Date(); monthStart.setDate(1); monthStart.setHours(0,0,0,0);
+      const monthEnd = new Date(monthStart); monthEnd.setMonth(monthEnd.getMonth() + 1);
+      const [items, billsAll, billsMonth, debts] = await Promise.all([
         supabase.from("shopping_items").select("status").eq("family_id", familyId!).is("deleted_at", null),
-        supabase.from("bills").select("nominal,due_date,is_paid").eq("family_id", familyId!).is("deleted_at", null).eq("is_paid", false),
-        supabase.from("debts_credits").select("type,total_amount").eq("family_id", familyId!).is("deleted_at", null),
+        supabase.from("bills").select("id,is_paid").eq("family_id", familyId!).is("deleted_at", null).eq("is_paid", false),
+        supabase.from("bills").select("id,is_paid,due_date").eq("family_id", familyId!).is("deleted_at", null)
+          .gte("due_date", monthStart.toISOString().slice(0,10)).lt("due_date", monthEnd.toISOString().slice(0,10)),
+        supabase.from("debts_credits").select("type,total_amount, installment_logs(amount_paid)").eq("family_id", familyId!).is("deleted_at", null),
       ]);
       const lowStock = (items.data ?? []).filter((i) => i.status !== "Aman").length;
-      const unpaidCount = (bills.data ?? []).length;
-      const hutang = (debts.data ?? []).filter((d) => d.type === "hutang").reduce((s, d) => s + Number(d.total_amount), 0);
-      const piutang = (debts.data ?? []).filter((d) => d.type === "piutang").reduce((s, d) => s + Number(d.total_amount), 0);
       const habis = (items.data ?? []).filter((i) => i.status === "Habis").length;
-      return { lowStock, unpaidCount, hutang, piutang, habis };
+      const unpaidCount = (billsAll.data ?? []).length;
+      const monthUnpaid = (billsMonth.data ?? []).filter((b: any) => !b.is_paid).length;
+      const monthTotal = (billsMonth.data ?? []).length;
+      const hutang = (debts.data ?? []).filter((d: any) => d.type === "hutang")
+        .reduce((s: number, d: any) => {
+          const paid = (d.installment_logs ?? []).reduce((a: number, l: any) => a + Number(l.amount_paid), 0);
+          return s + Math.max(0, Number(d.total_amount) - paid);
+        }, 0);
+      const piutang = (debts.data ?? []).filter((d: any) => d.type === "piutang")
+        .reduce((s: number, d: any) => {
+          const paid = (d.installment_logs ?? []).reduce((a: number, l: any) => a + Number(l.amount_paid), 0);
+          return s + Math.max(0, Number(d.total_amount) - paid);
+        }, 0);
+      const hutangCount = (debts.data ?? []).filter((d: any) => d.type === "hutang").length;
+      return { lowStock, habis, unpaidCount, hutang, piutang, hutangCount, monthUnpaid, monthTotal };
     },
   });
 
@@ -54,7 +70,7 @@ function BerandaPage() {
     queryFn: async () => {
       const { data } = await supabase
         .from("bills")
-        .select("id,bill_name,nominal,due_date,is_recurring")
+        .select("id,bill_name,nominal,due_date,is_recurring,bill_type")
         .eq("family_id", familyId!)
         .is("deleted_at", null)
         .eq("is_paid", false)
@@ -72,53 +88,57 @@ function BerandaPage() {
           <h1 className="text-2xl font-bold tracking-tight truncate">{profile?.full_name?.split(" ")[0]} 👋</h1>
           <p className="text-[11px] text-muted-foreground mt-0.5">{family?.family_name}</p>
         </div>
-        <div className="h-12 w-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-semibold overflow-hidden shrink-0">
+        <Link to="/app/akun" className="h-12 w-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-semibold overflow-hidden shrink-0">
           {profile?.avatar_url ? <img src={profile.avatar_url} alt="" className="h-full w-full object-cover" /> : initials(profile?.full_name)}
-        </div>
+        </Link>
       </header>
 
+      {/* Summary cards */}
       <div className="grid grid-cols-2 gap-3 mb-5">
-        <SummaryCard to="/app/belanja" Icon={ShoppingBasket} label="Stok perlu" value={`${stats?.lowStock ?? 0} item`} accent={stats?.lowStock ? "warning" : "default"} />
-        <SummaryCard to="/app/keuangan" Icon={ReceiptText} label="Belum bayar" value={`${stats?.unpaidCount ?? 0} tagihan`} accent={stats?.unpaidCount ? "warning" : "default"} />
-        <SummaryCard to="/app/keuangan" Icon={TrendingDown} label="Hutang" value={formatRupiah(stats?.hutang ?? 0)} accent={stats?.hutang ? "destructive" : "default"} />
-        <SummaryCard to="/app/keuangan" Icon={Wallet} label="Piutang" value={formatRupiah(stats?.piutang ?? 0)} accent={stats?.piutang ? "success" : "default"} />
+        <SummaryTile to="/app/belanja" Icon={Package} label="Stok menipis" value={`${stats?.lowStock ?? 0} item`} bg="bg-warning/15" fg="text-warning-foreground" iconBg="bg-warning/25" />
+        <SummaryTile to="/app/keuangan" Icon={ReceiptText} label="Belum bayar" value={`${stats?.unpaidCount ?? 0} tagihan`} bg="bg-primary/10" fg="text-primary" iconBg="bg-primary/20" />
+        <SummaryTile to="/app/keuangan" Icon={TrendingDown} label="Hutang aktif" value={formatRupiah(stats?.hutang ?? 0)} bg="bg-destructive/10" fg="text-destructive" iconBg="bg-destructive/15" />
+        <SummaryTile to="/app/keuangan" Icon={Coins} label="Piutang" value={formatRupiah(stats?.piutang ?? 0)} bg="bg-success/15" fg="text-success-foreground" iconBg="bg-success/25" />
       </div>
 
-      {nextBill && <UpcomingBillCard bill={nextBill} familyId={familyId!} />}
+      {/* Upcoming bill */}
+      {nextBill ? (
+        <UpcomingBillCard bill={nextBill} familyId={familyId!} />
+      ) : (
+        <div className="bg-card border border-dashed border-border rounded-2xl p-5 text-center text-sm text-muted-foreground mb-6">
+          🎉 Tidak ada tagihan menunggu
+        </div>
+      )}
 
-      <SectionHeader title="Agenda keluarga" />
-      <AgendaList familyId={familyId!} />
+      {/* Agenda */}
+      <SectionHeader title="Agenda bulan ini" />
+      <AgendaSection familyId={familyId!} />
 
-      <SectionHeader title="Catatan cepat" />
+      {/* Quick notes */}
+      <SectionHeader title="Catatan rumah" />
       <QuickNotesCard familyId={familyId!} />
 
-      <SectionHeader title="Highlight rumah" />
-      <HighlightsCard stats={stats} />
-
-      <SectionHeader title="Papan tugas" hint="Geser horizontal" />
-      <KanbanWrap familyId={familyId!} />
+      {/* Achievements */}
+      <SectionHeader title="Pencapaian rumah" />
+      <Achievements stats={stats} />
 
       <QuickAddSheet />
     </MainLayout>
   );
 }
 
-function SectionHeader({ title, hint }: { title: string; hint?: string }) {
-  return (
-    <div className="mt-6 mb-2 flex items-center justify-between">
-      <h2 className="text-base font-bold">{title}</h2>
-      {hint && <span className="text-[11px] text-muted-foreground">{hint}</span>}
-    </div>
-  );
+function SectionHeader({ title }: { title: string }) {
+  return <h2 className="text-base font-bold mt-7 mb-3">{title}</h2>;
 }
 
-function SummaryCard({ to, Icon, label, value, accent }: { to: string; Icon: any; label: string; value: string; accent: "default" | "warning" | "destructive" | "success" }) {
-  const accentMap = { default: "text-primary", warning: "text-warning", destructive: "text-destructive", success: "text-success" } as const;
+function SummaryTile({ to, Icon, label, value, bg, fg, iconBg }: { to: string; Icon: any; label: string; value: string; bg: string; fg: string; iconBg: string }) {
   return (
-    <Link to={to} className="bg-card border border-border rounded-2xl p-4 shadow-soft hover:shadow-card transition active:scale-[0.98]">
-      <Icon className={cn("h-5 w-5 mb-2", accentMap[accent])} />
+    <Link to={to} className={cn("rounded-2xl p-4 transition active:scale-[0.98]", bg)}>
+      <div className={cn("h-8 w-8 rounded-xl flex items-center justify-center mb-3", iconBg)}>
+        <Icon className={cn("h-4 w-4", fg)} />
+      </div>
       <p className="text-[11px] text-muted-foreground">{label}</p>
-      <p className="text-base font-bold leading-tight mt-0.5">{value}</p>
+      <p className={cn("text-base font-bold leading-tight mt-0.5", fg)}>{value}</p>
     </Link>
   );
 }
@@ -146,69 +166,97 @@ function UpcomingBillCard({ bill, familyId }: { bill: any; familyId: string }) {
   });
 
   return (
-    <div className={cn("rounded-2xl p-4 mb-5 shadow-card text-primary-foreground", overdue ? "bg-gradient-to-br from-destructive to-destructive/70" : "bg-gradient-to-br from-primary to-primary-glow")}>
-      <div className="flex items-center gap-2 mb-1">
-        <Calendar className="h-4 w-4" />
-        <p className="text-[10px] uppercase tracking-wide opacity-90">Tagihan terdekat{bill.is_recurring ? " · berulang" : ""}</p>
-      </div>
-      <h3 className="text-lg font-bold leading-tight">{bill.bill_name}</h3>
-      <div className="flex items-baseline justify-between mt-1">
-        <span className="text-2xl font-extrabold">{formatRupiah(bill.nominal)}</span>
-        <span className="text-sm font-medium">{overdue ? `Telat ${-days} hari` : days === 0 ? "Hari ini" : `${days} hari lagi`}</span>
-      </div>
-      <div className="flex gap-2 mt-3">
-        <Button size="sm" variant="secondary" className="flex-1" onClick={() => pay.mutate()} disabled={pay.isPending}>
-          <CheckCircle2 className="h-4 w-4 mr-1" /> Lunasi
-        </Button>
-        <Button size="sm" variant="outline" className="flex-1 bg-transparent border-white/40 text-white hover:bg-white/15 hover:text-white" asChild>
-          <Link to="/app/keuangan">Detail</Link>
-        </Button>
+    <div className={cn(
+      "relative overflow-hidden rounded-3xl p-5 mb-6 shadow-card text-primary-foreground",
+      overdue ? "bg-gradient-to-br from-destructive via-destructive/85 to-destructive/70" : "bg-gradient-to-br from-primary via-primary to-primary-glow",
+    )}>
+      <div className="absolute -right-6 -top-6 h-24 w-24 rounded-full bg-white/10" />
+      <div className="absolute -right-2 -bottom-8 h-20 w-20 rounded-full bg-white/5" />
+      <div className="relative">
+        <div className="flex items-center gap-1.5 mb-1 opacity-90">
+          <Calendar className="h-3.5 w-3.5" />
+          <p className="text-[10px] uppercase tracking-widest font-semibold">Tagihan terdekat{bill.is_recurring ? " · berulang" : ""}</p>
+        </div>
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h3 className="text-lg font-bold leading-tight truncate">{bill.bill_name}</h3>
+            <p className="text-2xl font-extrabold mt-1">{formatRupiah(bill.nominal)}</p>
+          </div>
+          <div className="text-right shrink-0">
+            <p className="text-2xl font-extrabold leading-none">{overdue ? `-${-days}` : days === 0 ? "0" : days}</p>
+            <p className="text-[10px] uppercase tracking-wider opacity-90 mt-1">{overdue ? "hari telat" : days === 0 ? "hari ini" : "hari lagi"}</p>
+          </div>
+        </div>
+        <div className="flex gap-2 mt-4">
+          <Button size="sm" variant="secondary" className="flex-1" onClick={() => pay.mutate()} disabled={pay.isPending}>
+            <CheckCircle2 className="h-4 w-4 mr-1" /> Lunasi
+          </Button>
+          <Button size="sm" variant="outline" className="flex-1 bg-transparent border-white/40 text-white hover:bg-white/15 hover:text-white" asChild>
+            <Link to="/app/keuangan">Detail</Link>
+          </Button>
+        </div>
       </div>
     </div>
   );
 }
 
 const AGENDA_ICON: Record<string, any> = { ulang_tahun: Cake, kajian: BookOpen, sekolah: GraduationCap, janji: Calendar, pengingat: BellRing };
+const AGENDA_EMOJI: Record<string, string> = { ulang_tahun: "🎂", kajian: "🕌", sekolah: "🎓", janji: "📌", pengingat: "⚡" };
 
-function AgendaList({ familyId }: { familyId: string }) {
+function AgendaSection({ familyId }: { familyId: string }) {
   const { data: agenda = [] } = useQuery({
     queryKey: ["agenda", familyId],
     enabled: !!familyId,
     queryFn: async () => {
       const today = new Date().toISOString().slice(0, 10);
+      const monthEnd = new Date(); monthEnd.setMonth(monthEnd.getMonth() + 1);
       const { data, error } = await supabase
         .from("agenda_events")
         .select("*")
         .eq("family_id", familyId)
         .is("deleted_at", null)
         .gte("event_date", today)
+        .lte("event_date", monthEnd.toISOString().slice(0, 10))
         .order("event_date")
-        .limit(3);
+        .limit(5);
       if (error) throw error;
       return data;
     },
   });
 
-  if (agenda.length === 0) {
-    return <p className="text-xs text-muted-foreground py-4 text-center bg-card border border-dashed border-border rounded-xl">Belum ada agenda. Tambah dengan tombol +</p>;
-  }
   return (
-    <div className="space-y-2">
-      {agenda.map((a: any) => {
-        const Icon = AGENDA_ICON[a.event_type] ?? BellRing;
-        const d = daysUntil(a.event_date);
-        return (
-          <div key={a.id} className="bg-card border border-border rounded-xl p-3 flex items-center gap-3 shadow-soft">
-            <div className="h-10 w-10 rounded-xl bg-accent text-accent-foreground flex items-center justify-center shrink-0"><Icon className="h-5 w-5" /></div>
-            <div className="flex-1 min-w-0">
-              <p className="font-semibold text-sm truncate">{a.title}</p>
-              <p className="text-[11px] text-muted-foreground capitalize">{String(a.event_type).replace("_", " ")}</p>
-            </div>
-            <span className="text-xs font-semibold text-primary shrink-0">{d === 0 ? "Hari ini" : `${d} hari`}</span>
-          </div>
-        );
-      })}
-    </div>
+    <>
+      {agenda.length === 0 ? (
+        <p className="text-xs text-muted-foreground py-5 text-center bg-card border border-dashed border-border rounded-2xl">
+          Belum ada agenda bulan ini
+        </p>
+      ) : (
+        <div className="space-y-2">
+          {agenda.map((a: any) => {
+            const Icon = AGENDA_ICON[a.event_type] ?? BellRing;
+            const d = daysUntil(a.event_date);
+            return (
+              <div key={a.id} className="bg-card border border-border rounded-2xl p-3 flex items-center gap-3 shadow-soft active:scale-[0.99] transition">
+                <div className="h-10 w-10 rounded-xl bg-accent text-accent-foreground flex items-center justify-center shrink-0 text-lg">
+                  <span aria-hidden>{AGENDA_EMOJI[a.event_type] ?? "📅"}</span>
+                  <Icon className="h-4 w-4 hidden" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-sm truncate">{a.title}</p>
+                  <p className="text-[11px] text-muted-foreground capitalize">{String(a.event_type).replace("_", " ")}</p>
+                </div>
+                <span className="text-xs font-semibold text-primary shrink-0">
+                  {d === 0 ? "Hari ini" : d === 1 ? "Besok" : `${d} hari lagi`}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+      <Button asChild variant="outline" size="sm" className="w-full mt-3 rounded-xl">
+        <Link to="/app/akun"><Calendar className="h-4 w-4 mr-2" /> Lihat kalender</Link>
+      </Button>
+    </>
   );
 }
 
@@ -228,7 +276,7 @@ function QuickNotesCard({ familyId }: { familyId: string }) {
         .is("deleted_at", null)
         .order("is_pinned", { ascending: false })
         .order("created_at", { ascending: false })
-        .limit(10);
+        .limit(8);
       if (error) throw error;
       return data;
     },
@@ -260,50 +308,63 @@ function QuickNotesCard({ familyId }: { familyId: string }) {
   });
 
   return (
-    <div className="bg-card border border-border rounded-2xl p-3 shadow-soft">
-      <form onSubmit={(e) => { e.preventDefault(); add.mutate(); }} className="flex gap-2 mb-2">
-        <Input value={text} onChange={(e) => setText(e.target.value)} placeholder="Tulis catatan singkat..." />
+    <div>
+      <form onSubmit={(e) => { e.preventDefault(); add.mutate(); }} className="flex gap-2 mb-3">
+        <Input value={text} onChange={(e) => setText(e.target.value)} placeholder="Tulis catatan singkat..." className="bg-card" />
         <Button type="submit" size="sm" disabled={!text.trim() || add.isPending}>Tambah</Button>
       </form>
-      <div className="space-y-1.5">
-        {notes.length === 0 && <p className="text-xs text-muted-foreground text-center py-3">Belum ada catatan</p>}
-        {notes.map((n: any) => (
-          <div key={n.id} className={cn("flex items-start gap-2 p-2 rounded-lg text-sm", n.is_pinned ? "bg-warning/10" : "bg-secondary/40")}>
-            <button onClick={() => togglePin.mutate(n)} className={cn("shrink-0 mt-0.5", n.is_pinned ? "text-warning" : "text-muted-foreground")}>
-              <Pin className={cn("h-3.5 w-3.5", n.is_pinned && "fill-current")} />
-            </button>
-            <div className="flex-1 min-w-0">
-              <p className="leading-snug break-words">{n.content}</p>
-              {n.created_by_name && <p className="text-[10px] text-muted-foreground mt-0.5">— {n.created_by_name}</p>}
+      {notes.length === 0 ? (
+        <p className="text-xs text-muted-foreground text-center py-4 bg-card border border-dashed border-border rounded-2xl">Belum ada catatan</p>
+      ) : (
+        <div className="grid grid-cols-2 gap-2">
+          {notes.map((n: any, i: number) => (
+            <div
+              key={n.id}
+              className={cn(
+                "relative p-3 rounded-xl text-sm shadow-soft",
+                n.is_pinned
+                  ? "bg-warning/20 border border-warning/40"
+                  : i % 2 === 0
+                    ? "bg-[oklch(0.95_0.04_85)] border border-warning/20"
+                    : "bg-[oklch(0.93_0.04_120)] border border-accent/40",
+              )}
+              style={{ fontFamily: "'Caveat', 'Comic Sans MS', cursive", transform: `rotate(${(i % 2 === 0 ? -0.6 : 0.6)}deg)` }}
+            >
+              <button onClick={() => togglePin.mutate(n)} className={cn("absolute top-1.5 right-7", n.is_pinned ? "text-warning" : "text-muted-foreground/60 hover:text-warning")}>
+                <Pin className={cn("h-3.5 w-3.5", n.is_pinned && "fill-current")} />
+              </button>
+              <button onClick={() => del.mutate(n.id)} className="absolute top-1.5 right-1.5 text-muted-foreground/60 hover:text-destructive">
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+              <p className="leading-snug break-words pr-10 text-[15px]">{n.content}</p>
+              {n.created_by_name && <p className="text-[10px] text-muted-foreground/80 mt-1.5" style={{ fontFamily: "var(--font-body)" }}>— {n.created_by_name}</p>}
             </div>
-            <button onClick={() => del.mutate(n.id)} className="text-muted-foreground hover:text-destructive shrink-0">
-              <Trash2 className="h-3.5 w-3.5" />
-            </button>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
 
-function HighlightsCard({ stats }: { stats: any }) {
-  const items: { ok: boolean; text: string }[] = [
-    { ok: (stats?.unpaidCount ?? 0) === 0, text: "Semua tagihan lunas bulan ini" },
-    { ok: (stats?.habis ?? 0) === 0, text: "Tidak ada stok habis minggu ini" },
-    { ok: (stats?.hutang ?? 0) === 0, text: "Tidak ada hutang aktif" },
-  ];
+function Achievements({ stats }: { stats: any }) {
+  const items = [
+    { ok: (stats?.monthTotal ?? 0) > 0 && (stats?.monthUnpaid ?? 0) === 0, Icon: Trophy, text: "Semua tagihan bulan ini lunas" },
+    { ok: (stats?.habis ?? 0) === 0, Icon: Sparkles, text: "Tidak ada stok habis minggu ini" },
+    { ok: (stats?.hutangCount ?? 0) === 0, Icon: Zap, text: "Tidak ada hutang aktif" },
+  ].filter((i) => i.ok);
+
+  if (items.length === 0) {
+    return <p className="text-xs text-muted-foreground text-center py-4 bg-card border border-dashed border-border rounded-2xl">Belum ada pencapaian — terus rapikan rumah ya 💪</p>;
+  }
+
   return (
-    <div className="bg-gradient-to-br from-accent/60 to-secondary border border-border rounded-2xl p-3 shadow-soft space-y-1.5">
-      {items.map((h, i) => (
-        <div key={i} className="flex items-center gap-2 text-sm">
-          {h.ok ? <Sparkles className="h-4 w-4 text-success shrink-0" /> : <BellRing className="h-4 w-4 text-warning shrink-0" />}
-          <span className={cn(h.ok ? "" : "text-muted-foreground")}>{h.ok ? h.text : `Cek ${h.text.toLowerCase()}`}</span>
+    <div className="flex flex-wrap gap-2">
+      {items.map(({ Icon, text }, i) => (
+        <div key={i} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-full bg-gradient-to-r from-success/15 to-primary/10 border border-success/30 text-xs font-medium text-success-foreground">
+          <Icon className="h-3.5 w-3.5 text-success" />
+          <span>{text}</span>
         </div>
       ))}
     </div>
   );
-}
-
-function KanbanWrap({ familyId }: { familyId: string }) {
-  return <KanbanBoard familyId={familyId} />;
 }
