@@ -22,6 +22,10 @@ const COLUMN_STYLE: Record<Status, string> = {
   "Done": "border-success",
 };
 
+async function tryFeedInsert(payload: Record<string, unknown>) {
+  try { await supabase.from("activity_feed").insert(payload); } catch {}
+}
+
 export function KanbanBoard({ familyId }: { familyId: string }) {
   const qc = useQueryClient();
   const { profile } = useAuth();
@@ -46,12 +50,17 @@ export function KanbanBoard({ familyId }: { familyId: string }) {
     mutationFn: async (v: any) => {
       const { error } = await supabase.from("kanban_boards").insert({ ...v, family_id: familyId });
       if (error) throw error;
-      await supabase.from("activity_feed").insert({
+    },
+    onSuccess: (_data, v) => {
+      qc.invalidateQueries({ queryKey: ["kanban", familyId] });
+      toast.success("Tugas dibuat");
+      setOpen(false);
+      // Fire & forget feed insert
+      tryFeedInsert({
         family_id: familyId, actor_id: profile?.id, actor_name: profile?.full_name,
         action_type: "task", entity_type: "kanban", description: `menambahkan tugas "${v.title}"`,
       });
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["kanban", familyId] }); toast.success("Tugas dibuat"); setOpen(false); },
   });
 
   const updateStatus = useMutation({
@@ -59,12 +68,17 @@ export function KanbanBoard({ familyId }: { familyId: string }) {
       const card = cards.find((c) => c.id === id);
       const { error } = await supabase.from("kanban_boards").update({ status }).eq("id", id);
       if (error) throw error;
-      if (card) await supabase.from("activity_feed").insert({
-        family_id: familyId, actor_id: profile?.id, actor_name: profile?.full_name,
-        action_type: "task", entity_type: "kanban", description: `memindahkan "${card.title}" ke ${status}`,
-      });
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["kanban", familyId] }),
+    onSuccess: (_data, { id, status }) => {
+      qc.invalidateQueries({ queryKey: ["kanban", familyId] });
+      const card = cards.find((c) => c.id === id);
+      if (card) {
+        tryFeedInsert({
+          family_id: familyId, actor_id: profile?.id, actor_name: profile?.full_name,
+          action_type: "task", entity_type: "kanban", description: `memindahkan "${card.title}" ke ${status}`,
+        });
+      }
+    },
   });
 
   const del = useMutation({

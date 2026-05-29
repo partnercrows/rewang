@@ -15,8 +15,11 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Copy, LogOut, User as UserIcon, Users, Phone, MessageCircle, FileText,
   Plus, Trash2, ExternalLink, Camera, Heart, Settings as Cog, ShieldCheck, Crown,
+  Sun, Moon, Globe, Lock, Eye, EyeOff, ChevronDown, ChevronUp,
 } from "lucide-react";
 import { cn, initials } from "@/lib/utils";
+import { useTheme } from "@/hooks/useTheme";
+import { useLang } from "@/hooks/useLang";
 
 export const Route = createFileRoute("/app/akun")({
   head: () => ({ meta: [{ title: "Akun — Rewang" }] }),
@@ -411,7 +414,7 @@ function WishlistShortcut({ familyId }: { familyId?: string }) {
   });
 
   return (
-    <Link to="/app/belanja" className="block bg-gradient-to-br from-accent to-secondary rounded-2xl p-4 mb-4 shadow-soft active:scale-[0.99] transition">
+    <Link to="/app/belanja" search={{ tab: "wishlist" }} className="block bg-gradient-to-br from-accent to-secondary rounded-2xl p-4 mb-4 shadow-soft active:scale-[0.99] transition">
       <div className="flex items-center gap-3">
         <div className="h-12 w-12 rounded-2xl bg-card flex items-center justify-center shadow-soft">
           <Heart className="h-5 w-5 text-primary" />
@@ -429,40 +432,129 @@ function WishlistShortcut({ familyId }: { familyId?: string }) {
 /* ============== SETTINGS ============== */
 
 function SettingsSection({ onSignOut }: { onSignOut: () => void }) {
+  const [open, setOpen] = useState(false);
   const [reminder, setReminder] = useState(true);
   const [notif, setNotif] = useState(true);
+  const { theme, toggle: toggleTheme } = useTheme();
+  const { lang, setLang, T } = useLang();
+  const [passwordOpen, setPasswordOpen] = useState(false);
+  const [currentPw, setCurrentPw] = useState("");
+  const [newPw, setNewPw] = useState("");
+  const [confirmPw, setConfirmPw] = useState("");
+  const [showNewPw, setShowNewPw] = useState(false);
+  const [showConfirmPw, setShowConfirmPw] = useState(false);
+  const [pwBusy, setPwBusy] = useState(false);
+
+  const changePassword = async () => {
+    if (newPw !== confirmPw) return toast.error(T("Kata sandi baru tidak cocok"));
+    if (newPw.length < 6) return toast.error(T("Minimal 6 karakter"));
+    setPwBusy(true);
+    const { error } = await supabase.auth.updateUser({ password: newPw });
+    setPwBusy(false);
+    if (error) return toast.error(error.message);
+    toast.success(T("Kata sandi berhasil diubah"));
+    setPasswordOpen(false);
+    setCurrentPw(""); setNewPw(""); setConfirmPw("");
+  };
 
   return (
     <section className="bg-card border border-border rounded-2xl p-5 mb-4 shadow-soft">
-      <div className="flex items-center gap-2 mb-3">
-        <Cog className="h-4 w-4 text-primary" />
-        <h3 className="font-semibold">Pengaturan</h3>
-      </div>
+      <button
+        onClick={() => setOpen(!open)}
+        className="flex items-center justify-between w-full mb-1"
+      >
+        <div className="flex items-center gap-2">
+          <Cog className="h-4 w-4 text-primary" />
+          <h3 className="font-semibold">{T("Pengaturan")}</h3>
+        </div>
+        {open ? <ChevronUp className="h-5 w-5 text-muted-foreground" /> : <ChevronDown className="h-5 w-5 text-muted-foreground" />}
+      </button>
+      {open && (
       <div className="space-y-1">
+        {/* Theme toggle */}
+        <div className="flex items-center justify-between p-3 rounded-xl hover:bg-secondary/40">
+          <div className="flex items-center gap-2">
+            {theme === "dark" ? <Moon className="h-4 w-4 text-indigo-400" /> : <Sun className="h-4 w-4 text-warning" />}
+            <p className="text-sm font-medium">{theme === "dark" ? T("Mode gelap") : T("Mode terang")}</p>
+          </div>
+          <Switch checked={theme === "dark"} onCheckedChange={toggleTheme} />
+        </div>
+        {/* Language toggle */}
+        <div className="flex items-center justify-between p-3 rounded-xl hover:bg-secondary/40">
+          <div className="flex items-center gap-2">
+            <Globe className="h-4 w-4 text-primary" />
+            <div>
+              <p className="text-sm font-medium">{T("Bahasa")}</p>
+              <p className="text-[11px] text-muted-foreground">{lang === "id" ? T("Indonesia") : T("English")}</p>
+            </div>
+          </div>
+          <Switch checked={lang === "en"} onCheckedChange={(v) => setLang(v ? "en" : "id")} />
+        </div>
+        {/* Change password */}
+        <Dialog open={passwordOpen} onOpenChange={setPasswordOpen}>
+          <DialogTrigger asChild>
+            <button className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-secondary/40">
+              <div className="flex items-center gap-2">
+                <Lock className="h-4 w-4 text-success" />
+                <p className="text-sm font-medium">{T("Ubah kata sandi")}</p>
+              </div>
+              <span className="text-[11px] text-muted-foreground">→</span>
+            </button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader><DialogTitle>{T("Ubah kata sandi")}</DialogTitle></DialogHeader>
+            <form onSubmit={(e) => { e.preventDefault(); changePassword(); }} className="space-y-3">
+              <div>
+                <Label>{T("Kata sandi baru")}</Label>
+                <div className="relative">
+                  <Input type={showNewPw ? "text" : "password"} required value={newPw} onChange={(e) => setNewPw(e.target.value)} placeholder="••••••" className="pr-10" />
+                  <button type="button" tabIndex={-1} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground" onClick={() => setShowNewPw(!showNewPw)}>
+                    {showNewPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+              </div>
+              <div>
+                <Label>{T("Konfirmasi kata sandi baru")}</Label>
+                <div className="relative">
+                  <Input type={showConfirmPw ? "text" : "password"} required value={confirmPw} onChange={(e) => setConfirmPw(e.target.value)} placeholder="••••••" className="pr-10" />
+                  <button type="button" tabIndex={-1} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground" onClick={() => setShowConfirmPw(!showConfirmPw)}>
+                    {showConfirmPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button type="button" variant="outline" className="flex-1" onClick={() => setPasswordOpen(false)}>{T("Batal")}</Button>
+                <Button type="submit" className="flex-1" disabled={pwBusy}>{T("Simpan")}</Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
+        {/* Notifications */}
         <div className="flex items-center justify-between p-3 rounded-xl hover:bg-secondary/40">
           <div>
-            <p className="text-sm font-medium">Pengingat tagihan</p>
-            <p className="text-[11px] text-muted-foreground">Tampilkan tagihan jatuh tempo</p>
+            <p className="text-sm font-medium">{T("Pengingat tagihan")}</p>
+            <p className="text-[11px] text-muted-foreground">{T("Tampilkan tagihan jatuh tempo")}</p>
           </div>
           <Switch checked={reminder} onCheckedChange={setReminder} />
         </div>
         <div className="flex items-center justify-between p-3 rounded-xl hover:bg-secondary/40">
           <div>
-            <p className="text-sm font-medium">Notifikasi aktivitas</p>
-            <p className="text-[11px] text-muted-foreground">Update keluarga di feed</p>
+            <p className="text-sm font-medium">{T("Notifikasi aktivitas")}</p>
+            <p className="text-[11px] text-muted-foreground">{T("Update keluarga di feed")}</p>
           </div>
           <Switch checked={notif} onCheckedChange={setNotif} />
         </div>
         <div className="flex items-center justify-between p-3 rounded-xl hover:bg-secondary/40">
           <div className="flex items-center gap-2">
             <ShieldCheck className="h-4 w-4 text-success" />
-            <p className="text-sm font-medium">Keamanan akun</p>
+            <p className="text-sm font-medium">{T("Keamanan akun")}</p>
           </div>
-          <span className="text-[11px] text-muted-foreground">Aktif</span>
+          <span className="text-[11px] text-muted-foreground">{T("Aktif")}</span>
         </div>
       </div>
+      )}
       <Button variant="outline" className="w-full text-destructive hover:text-destructive mt-3" onClick={onSignOut}>
-        <LogOut className="h-4 w-4 mr-2" /> Keluar
+        <LogOut className="h-4 w-4 mr-2" /> {T("Keluar")}
       </Button>
     </section>
   );

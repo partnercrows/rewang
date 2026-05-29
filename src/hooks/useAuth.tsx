@@ -64,6 +64,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
+    let initialEventFired = false;
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, newSession) => {
       setSession(newSession);
       if (newSession?.user) {
@@ -74,6 +76,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setProfile(null);
         setFamily(null);
       }
+      if (!initialEventFired) {
+        initialEventFired = true;
+        if (!newSession?.user) setLoading(false);
+      }
       router.invalidate();
     });
 
@@ -81,8 +87,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(data.session);
       if (data.session?.user) {
         loadProfile(data.session.user.id).finally(() => setLoading(false));
-      } else {
-        setLoading(false);
+      } else if (!initialEventFired) {
+        // Wait for onAuthStateChange to fire before giving up.
+        // This handles OAuth hash processing race condition.
+        setTimeout(() => {
+          if (!initialEventFired) {
+            initialEventFired = true;
+            setLoading(false);
+          }
+        }, 1500);
       }
     });
 

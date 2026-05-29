@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { generateInviteCode } from "@/lib/utils";
 import { toast } from "sonner";
-import { Home, Loader2, Users, Plus } from "lucide-react";
+import { Home, Loader2, Users, Plus, LogOut } from "lucide-react";
 
 export const Route = createFileRoute("/onboarding")({
   head: () => ({ meta: [{ title: "Mulai — Rumahku" }] }),
@@ -16,11 +16,16 @@ export const Route = createFileRoute("/onboarding")({
 
 function OnboardingPage() {
   const navigate = useNavigate();
-  const { session, profile, loading, refresh } = useAuth();
+  const { session, profile, loading, refresh, signOut } = useAuth();
   const [mode, setMode] = useState<"choose" | "create" | "join">("choose");
   const [familyName, setFamilyName] = useState("");
   const [inviteCode, setInviteCode] = useState("");
   const [busy, setBusy] = useState(false);
+
+  const handleLogout = async () => {
+    await signOut();
+    navigate({ to: "/login" });
+  };
 
   if (loading) {
     return (
@@ -77,36 +82,45 @@ function OnboardingPage() {
         </div>
 
         {mode === "choose" && (
-          <div className="grid gap-3">
-            <button
-              onClick={() => setMode("create")}
-              className="bg-card border border-border rounded-2xl p-5 text-left shadow-soft hover:shadow-card transition group"
+          <>
+            <div className="grid gap-3">
+              <button
+                onClick={() => setMode("create")}
+                className="bg-card border border-border rounded-2xl p-5 text-left shadow-soft hover:shadow-card transition group"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="h-12 w-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center group-hover:bg-primary group-hover:text-primary-foreground transition">
+                    <Plus className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold">Buat keluarga baru</h3>
+                    <p className="text-sm text-muted-foreground">Mulai grup rumah tangga Anda</p>
+                  </div>
+                </div>
+              </button>
+              <button
+                onClick={() => setMode("join")}
+                className="bg-card border border-border rounded-2xl p-5 text-left shadow-soft hover:shadow-card transition group"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="h-12 w-12 rounded-xl bg-accent text-accent-foreground flex items-center justify-center">
+                    <Users className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold">Gabung dengan kode</h3>
+                    <p className="text-sm text-muted-foreground">Masuk ke keluarga yang sudah ada</p>
+                  </div>
+                </div>
+              </button>
+            </div>
+            <Button
+              variant="ghost"
+              className="w-full mt-5 text-muted-foreground"
+              onClick={handleLogout}
             >
-              <div className="flex items-center gap-3">
-                <div className="h-12 w-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center group-hover:bg-primary group-hover:text-primary-foreground transition">
-                  <Plus className="h-6 w-6" />
-                </div>
-                <div>
-                  <h3 className="font-semibold">Buat keluarga baru</h3>
-                  <p className="text-sm text-muted-foreground">Mulai grup rumah tangga Anda</p>
-                </div>
-              </div>
-            </button>
-            <button
-              onClick={() => setMode("join")}
-              className="bg-card border border-border rounded-2xl p-5 text-left shadow-soft hover:shadow-card transition group"
-            >
-              <div className="flex items-center gap-3">
-                <div className="h-12 w-12 rounded-xl bg-accent text-accent-foreground flex items-center justify-center">
-                  <Users className="h-6 w-6" />
-                </div>
-                <div>
-                  <h3 className="font-semibold">Gabung dengan kode</h3>
-                  <p className="text-sm text-muted-foreground">Masuk ke keluarga yang sudah ada</p>
-                </div>
-              </div>
-            </button>
-          </div>
+              <LogOut className="h-4 w-4 mr-2" /> Keluar
+            </Button>
+          </>
         )}
 
         {mode === "create" && (

@@ -15,7 +15,9 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as AppRouteImport } from './routes/app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppIndexRouteImport } from './routes/app.index'
+import { Route as AppTugasRouteImport } from './routes/app.tugas'
 import { Route as AppKeuanganRouteImport } from './routes/app.keuangan'
+import { Route as AppKalenderRouteImport } from './routes/app.kalender'
 import { Route as AppFeedRouteImport } from './routes/app.feed'
 import { Route as AppBelanjaRouteImport } from './routes/app.belanja'
 import { Route as AppAkunRouteImport } from './routes/app.akun'
@@ -50,9 +52,19 @@ const AppIndexRoute = AppIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AppRoute,
 } as any)
+const AppTugasRoute = AppTugasRouteImport.update({
+  id: '/tugas',
+  path: '/tugas',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppKeuanganRoute = AppKeuanganRouteImport.update({
   id: '/keuangan',
   path: '/keuangan',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppKalenderRoute = AppKalenderRouteImport.update({
+  id: '/kalender',
+  path: '/kalender',
   getParentRoute: () => AppRoute,
 } as any)
 const AppFeedRoute = AppFeedRouteImport.update({
@@ -80,7 +92,9 @@ export interface FileRoutesByFullPath {
   '/app/akun': typeof AppAkunRoute
   '/app/belanja': typeof AppBelanjaRoute
   '/app/feed': typeof AppFeedRoute
+  '/app/kalender': typeof AppKalenderRoute
   '/app/keuangan': typeof AppKeuanganRoute
+  '/app/tugas': typeof AppTugasRoute
   '/app/': typeof AppIndexRoute
 }
 export interface FileRoutesByTo {
@@ -91,7 +105,9 @@ export interface FileRoutesByTo {
   '/app/akun': typeof AppAkunRoute
   '/app/belanja': typeof AppBelanjaRoute
   '/app/feed': typeof AppFeedRoute
+  '/app/kalender': typeof AppKalenderRoute
   '/app/keuangan': typeof AppKeuanganRoute
+  '/app/tugas': typeof AppTugasRoute
   '/app': typeof AppIndexRoute
 }
 export interface FileRoutesById {
@@ -104,7 +120,9 @@ export interface FileRoutesById {
   '/app/akun': typeof AppAkunRoute
   '/app/belanja': typeof AppBelanjaRoute
   '/app/feed': typeof AppFeedRoute
+  '/app/kalender': typeof AppKalenderRoute
   '/app/keuangan': typeof AppKeuanganRoute
+  '/app/tugas': typeof AppTugasRoute
   '/app/': typeof AppIndexRoute
 }
 export interface FileRouteTypes {
@@ -118,7 +136,9 @@ export interface FileRouteTypes {
     | '/app/akun'
     | '/app/belanja'
     | '/app/feed'
+    | '/app/kalender'
     | '/app/keuangan'
+    | '/app/tugas'
     | '/app/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -129,7 +149,9 @@ export interface FileRouteTypes {
     | '/app/akun'
     | '/app/belanja'
     | '/app/feed'
+    | '/app/kalender'
     | '/app/keuangan'
+    | '/app/tugas'
     | '/app'
   id:
     | '__root__'
@@ -141,7 +163,9 @@ export interface FileRouteTypes {
     | '/app/akun'
     | '/app/belanja'
     | '/app/feed'
+    | '/app/kalender'
     | '/app/keuangan'
+    | '/app/tugas'
     | '/app/'
   fileRoutesById: FileRoutesById
 }
@@ -197,11 +221,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppIndexRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/tugas': {
+      id: '/app/tugas'
+      path: '/tugas'
+      fullPath: '/app/tugas'
+      preLoaderRoute: typeof AppTugasRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/keuangan': {
       id: '/app/keuangan'
       path: '/keuangan'
       fullPath: '/app/keuangan'
       preLoaderRoute: typeof AppKeuanganRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/kalender': {
+      id: '/app/kalender'
+      path: '/kalender'
+      fullPath: '/app/kalender'
+      preLoaderRoute: typeof AppKalenderRouteImport
       parentRoute: typeof AppRoute
     }
     '/app/feed': {
@@ -232,7 +270,9 @@ interface AppRouteChildren {
   AppAkunRoute: typeof AppAkunRoute
   AppBelanjaRoute: typeof AppBelanjaRoute
   AppFeedRoute: typeof AppFeedRoute
+  AppKalenderRoute: typeof AppKalenderRoute
   AppKeuanganRoute: typeof AppKeuanganRoute
+  AppTugasRoute: typeof AppTugasRoute
   AppIndexRoute: typeof AppIndexRoute
 }
 
@@ -240,7 +280,9 @@ const AppRouteChildren: AppRouteChildren = {
   AppAkunRoute: AppAkunRoute,
   AppBelanjaRoute: AppBelanjaRoute,
   AppFeedRoute: AppFeedRoute,
+  AppKalenderRoute: AppKalenderRoute,
   AppKeuanganRoute: AppKeuanganRoute,
+  AppTugasRoute: AppTugasRoute,
   AppIndexRoute: AppIndexRoute,
 }
 
@@ -256,3 +298,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
