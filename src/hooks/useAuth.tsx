@@ -25,7 +25,7 @@ type AuthContextValue = {
   profile: Profile | null;
   family: Family | null;
   loading: boolean;
-  refresh: () => Promise<void>;
+  refresh: () => Promise<Profile | null>;
   signOut: () => Promise<void>;
 };
 
@@ -38,29 +38,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
-  const loadProfile = async (userId: string) => {
+  const loadProfile = async (userId: string): Promise<Profile | null> => {
     const { data: prof } = await supabase
       .from("profiles")
       .select("id,email,full_name,avatar_url,phone_number,family_id,role")
       .eq("id", userId)
       .maybeSingle();
-    setProfile(prof as Profile | null);
+    const p = prof as Profile | null;
+    setProfile(p);
 
-    if (prof?.family_id) {
+    if (p?.family_id) {
       const { data: fam } = await supabase
         .from("families")
         .select("id,family_name,invite_code")
-        .eq("id", prof.family_id)
+        .eq("id", p.family_id)
         .is("deleted_at", null)
         .maybeSingle();
       setFamily(fam as Family | null);
     } else {
       setFamily(null);
     }
+
+    return p;
   };
 
-  const refresh = async () => {
-    if (session?.user) await loadProfile(session.user.id);
+  const refresh = async (): Promise<Profile | null> => {
+    if (!session?.user) return null;
+    return loadProfile(session.user.id);
   };
 
   useEffect(() => {

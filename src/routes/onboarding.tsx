@@ -34,8 +34,8 @@ function OnboardingPage() {
       </div>
     );
   }
-  if (!session) return <Navigate to="/login" replace />;
-  if (profile?.family_id) return <Navigate to="/app" replace />;
+  if (!session) return <Navigate to="/login" search={{}} replace />;
+  if (profile?.family_id) return <Navigate to="/app" search={{}} replace />;
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,9 +49,12 @@ function OnboardingPage() {
       setBusy(false);
       return toast.error(error.message ?? "Gagal membuat keluarga");
     }
-    await refresh();
-    toast.success(`Keluarga "${familyName}" dibuat!`);
-    navigate({ to: "/app" });
+    const updatedProfile = await refresh();
+    if (updatedProfile?.family_id) {
+      toast.success(`Keluarga "${familyName}" dibuat!`);
+    } else {
+      toast.error("Gagal memuat data keluarga, coba refresh halaman.");
+    }
   };
 
   const handleJoin = async (e: React.FormEvent) => {
@@ -65,9 +68,12 @@ function OnboardingPage() {
       setBusy(false);
       return toast.error(error.message?.includes("not found") ? "Kode undangan tidak ditemukan" : error.message);
     }
-    await refresh();
-    toast.success("Bergabung ke keluarga!");
-    navigate({ to: "/app" });
+    const updatedProfile = await refresh();
+    if (updatedProfile?.family_id) {
+      toast.success("Bergabung ke keluarga!");
+    } else {
+      toast.error("Gagal memuat data keluarga, coba refresh halaman.");
+    }
   };
 
   return (
