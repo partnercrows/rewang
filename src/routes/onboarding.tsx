@@ -52,6 +52,7 @@ function OnboardingPage() {
     const updatedProfile = await refresh();
     if (updatedProfile?.family_id) {
       toast.success(`Keluarga "${familyName}" dibuat!`);
+      navigate({ to: "/app", search: {} });
     } else {
       toast.error("Gagal memuat data keluarga, coba refresh halaman.");
     }
@@ -71,6 +72,7 @@ function OnboardingPage() {
     const updatedProfile = await refresh();
     if (updatedProfile?.family_id) {
       toast.success("Bergabung ke keluarga!");
+      navigate({ to: "/app", search: {} });
     } else {
       toast.error("Gagal memuat data keluarga, coba refresh halaman.");
     }
