@@ -1,6 +1,6 @@
 import { createFileRoute, Navigate, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth, type Family } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,7 +16,7 @@ export const Route = createFileRoute("/onboarding")({
 
 function OnboardingPage() {
   const navigate = useNavigate();
-  const { session, profile, loading, refresh, signOut } = useAuth();
+  const { session, profile, loading, refresh, setFamilyDirect, signOut } = useAuth();
   const [mode, setMode] = useState<"choose" | "create" | "join">("choose");
   const [familyName, setFamilyName] = useState("");
   const [inviteCode, setInviteCode] = useState("");
@@ -41,7 +41,7 @@ function OnboardingPage() {
     e.preventDefault();
     setBusy(true);
     const invite_code = generateInviteCode();
-    const { error } = await supabase.rpc("create_family", {
+    const { data: newFamily, error } = await supabase.rpc("create_family", {
       _family_name: familyName,
       _invite_code: invite_code,
     });
@@ -49,12 +49,28 @@ function OnboardingPage() {
       setBusy(false);
       return toast.error(error.message ?? "Gagal membuat keluarga");
     }
-    const updatedProfile = await refresh();
-    if (updatedProfile?.family_id) {
+    const famData = newFamily as Family | null;
+    if (famData?.id) {
+      // Directly update state with the returned family data instead of polling DB
+      setFamilyDirect(famData);
       toast.success(`Keluarga "${familyName}" dibuat!`);
       navigate({ to: "/app", search: {} });
     } else {
-      toast.error("Gagal memuat data keluarga, coba refresh halaman.");
+      // Fallback: try polling refresh (shouldn't normally reach here)
+      await new Promise((r) => setTimeout(r, 500));
+      let updatedProfile: Awaited<ReturnType<typeof refresh>> = null;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        updatedProfile = await refresh();
+        if (updatedProfile?.family_id) break;
+        await new Promise((r) => setTimeout(r, 300));
+      }
+      if (updatedProfile?.family_id) {
+        toast.success(`Keluarga "${familyName}" dibuat!`);
+        navigate({ to: "/app", search: {} });
+      } else {
+        setBusy(false);
+        toast.error("Gagal memuat data keluarga, coba refresh halaman.");
+      }
     }
   };
 
@@ -69,11 +85,19 @@ function OnboardingPage() {
       setBusy(false);
       return toast.error(error.message?.includes("not found") ? "Kode undangan tidak ditemukan" : error.message);
     }
-    const updatedProfile = await refresh();
+    // Small delay to let the DB trigger fully propagate before refresh
+    await new Promise((r) => setTimeout(r, 500));
+    let updatedProfile: Awaited<ReturnType<typeof refresh>> = null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      updatedProfile = await refresh();
+      if (updatedProfile?.family_id) break;
+      await new Promise((r) => setTimeout(r, 300));
+    }
     if (updatedProfile?.family_id) {
       toast.success("Bergabung ke keluarga!");
       navigate({ to: "/app", search: {} });
     } else {
+      setBusy(false);
       toast.error("Gagal memuat data keluarga, coba refresh halaman.");
     }
   };

@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { useAuth } from "@/hooks/useAuth";
 import { useLang } from "@/hooks/useLang";
@@ -8,10 +8,30 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { toast } from "sonner";
-import { Plus, Trash2, ChevronLeft, ChevronRight, CalendarDays } from "lucide-react";
+import { Plus, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+// Indonesian national holidays 2026
+const LIBUR_NASIONAL: Record<string, string> = {
+  "2026-01-01": "Tahun Baru 2026 Masehi",
+  "2026-01-25": "Tahun Baru Imlek 2577 Kongzili",
+  "2026-02-18": "Isra Mi'raj Nabi Muhammad SAW",
+  "2026-03-20": "Hari Raya Nyepi Tahun Baru Saka 1948",
+  "2026-03-21": "Idul Fitri 1447 H",
+  "2026-03-22": "Idul Fitri 1447 H",
+  "2026-04-03": "Wafat Isa Al Masih",
+  "2026-05-01": "Hari Buruh Internasional",
+  "2026-05-08": "Kenaikan Isa Al Masih",
+  "2026-05-28": "Idul Adha 1447 H",
+  "2026-05-31": "Hari Raya Waisak 2570",
+  "2026-06-01": "Hari Lahir Pancasila",
+  "2026-06-17": "Tahun Baru Islam 1448 H",
+  "2026-08-17": "Hari Kemerdekaan RI",
+  "2026-08-26": "Maulid Nabi Muhammad SAW",
+  "2026-12-25": "Hari Raya Natal",
+};
 
 export const Route = createFileRoute("/app/kalender")({
   head: () => ({ meta: [{ title: "Kalender — Rewang" }] }),
@@ -63,6 +83,8 @@ function KalenderPage() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["calendar", familyId] });
+      qc.invalidateQueries({ queryKey: ["home-agenda", familyId] });
+      qc.invalidateQueries({ queryKey: ["feed", familyId] });
       toast.success(T("Agenda ditambahkan"));
       setOpen(false);
     },
@@ -74,9 +96,30 @@ function KalenderPage() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["calendar", familyId] });
+      qc.invalidateQueries({ queryKey: ["home-agenda", familyId] });
+      qc.invalidateQueries({ queryKey: ["feed", familyId] });
       toast.success(T("Agenda dihapus"));
     },
   });
+
+  // Realtime subscription
+  useEffect(() => {
+    if (!familyId) return;
+    const ch = supabase
+      .channel(`calendar-${familyId}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "agenda_events", filter: `family_id=eq.${familyId}` },
+        () => {
+          qc.invalidateQueries({ queryKey: ["calendar", familyId] });
+          qc.invalidateQueries({ queryKey: ["home-agenda", familyId] });
+        },
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(ch);
+    };
+  }, [familyId, qc]);
 
   const todayStr = new Date().toISOString().slice(0, 10);
 
@@ -95,9 +138,19 @@ function KalenderPage() {
     "Juli", "Agustus", "September", "Oktober", "November", "Desember",
   ];
 
+  // Helper: check if a date is weekend (Sabtu=6, Minggu=0)
+  const isWeekend = (y: number, m: number, d: number) => {
+    const dayOfWeek = new Date(y, m, d).getDay();
+    return dayOfWeek === 0 || dayOfWeek === 6;
+  };
+
   const todayEvents = (eventsByDate[selectedDate || todayStr] || []).sort(
     (a, b) => (a.created_at || "").localeCompare(b.created_at || "")
   );
+
+  // Check if there is holiday info to show below calendar
+  const selectedLibur = selectedDate ? LIBUR_NASIONAL[selectedDate] : LIBUR_NASIONAL[todayStr];
+  const todayLibur = LIBUR_NASIONAL[todayStr];
 
   return (
     <MainLayout title={T("Kalender")}>
@@ -111,44 +164,63 @@ function KalenderPage() {
         </Button>
       </div>
 
-      <div className="grid grid-cols-7 gap-1 text-center mb-2">
-        {["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"].map((d) => (
-          <div key={d} className="text-[11px] font-semibold text-muted-foreground py-1">{d}</div>
+      <div className="grid grid-cols-7 gap-0.5 text-center mb-1.5">
+        {["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"].map((d, idx) => (
+          <div key={d} className={cn("text-[10px] font-semibold py-1", (idx === 0 || idx === 6) ? "text-red-500" : "text-muted-foreground")}>{d}</div>
         ))}
       </div>
 
-      <div className="grid grid-cols-7 gap-1">
+      <div className="grid grid-cols-7 gap-0.5">
         {Array.from({ length: firstDay }).map((_, i) => <div key={`empty-${i}`} />)}
         {Array.from({ length: daysInMonth }).map((_, i) => {
           const day = i + 1;
           const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
           const hasEvents = eventsByDate[dateStr]?.length > 0;
+          const eventCount = eventsByDate[dateStr]?.length || 0;
           const isToday = dateStr === todayStr;
           const isSelected = dateStr === selectedDate;
+          const weekend = isWeekend(year, month, day);
+          const isLibur = !!LIBUR_NASIONAL[dateStr];
+          const isRed = weekend || isLibur;
           return (
             <button
               key={day}
               onClick={() => setSelectedDate(isSelected ? null : dateStr)}
               className={cn(
-                "relative aspect-square rounded-lg flex flex-col items-center justify-center text-sm transition-all",
+                "relative aspect-square rounded-md flex flex-col items-center justify-center transition-all min-w-0 overflow-hidden border-2 border-transparent",
+                "text-[10px] leading-tight",
                 isToday && "bg-primary/10 font-extrabold",
                 isSelected && "bg-primary text-primary-foreground",
-                !isToday && !isSelected && "hover:bg-secondary"
+                !isToday && !isSelected && "hover:bg-secondary",
+                hasEvents && !isSelected && "border-amber-400",
+                hasEvents && isSelected && "border-amber-300",
               )}
             >
-              <span className="text-xs">{day}</span>
-              {hasEvents && <span className={cn("w-1 h-1 rounded-full mt-0.5", isSelected ? "bg-primary-foreground" : "bg-primary")} />}
+              <span className={cn("text-[10px] leading-none", isRed && !isSelected && "text-red-500 font-semibold")}>{day}</span>
+              <div className="flex gap-0.5 mt-0.5">
+                {hasEvents && <span className={cn("w-1 h-1 rounded-full shrink-0", isSelected ? "bg-primary-foreground" : "bg-amber-500")} />}
+                {isLibur && <span className={cn("w-1 h-1 rounded-full shrink-0", isSelected ? "bg-primary-foreground" : "bg-red-500")} />}
+              </div>
             </button>
           );
         })}
       </div>
+
+      {(selectedLibur || todayLibur) && (
+        <div className="mt-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-xl p-3 text-center">
+          <p className="text-sm font-semibold text-red-600 dark:text-red-400">🔴 {selectedLibur || todayLibur}</p>
+          <p className="text-[10px] text-red-500 dark:text-red-400/80 mt-0.5">{T("Libur Nasional")}</p>
+        </div>
+      )}
 
       <div className="mt-5 mb-24">
         <div className="flex items-center justify-between mb-3">
           <h3 className="font-semibold text-sm">
             {selectedDate
               ? `${selectedDate}`
-              : T("Agenda bulan ini")}
+              : todayEvents.length > 0
+                ? `${T("Hari ini")} — ${todayStr}`
+                : `${T("Agenda")} — ${todayStr}`}
           </h3>
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
@@ -172,7 +244,7 @@ function KalenderPage() {
             {T("Tidak ada agenda di tanggal ini")}
           </p>
         ) : (
-          <div className="space-y-2">
+          <div className="space-y-2 max-h-[calc(100vh-28rem)] overflow-y-auto pr-1">
             {todayEvents.map((ev: any) => {
               const d = new Date(ev.event_date);
               const diff = Math.ceil((d.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
@@ -201,13 +273,6 @@ function KalenderPage() {
         )}
       </div>
 
-      <Link
-        to="/app"
-        className="fixed bottom-24 left-1/2 -translate-x-1/2 shadow-card rounded-full h-10 px-4 bg-card border border-border flex items-center gap-2 text-sm font-medium hover:bg-secondary transition-colors"
-      >
-        <CalendarDays className="h-4 w-4" />
-        {T("Lihat kalender")}
-      </Link>
     </MainLayout>
   );
 }

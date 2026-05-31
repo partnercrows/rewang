@@ -284,7 +284,7 @@ function TugasPage() {
 
                 {/* Delete button */}
                 <button
-                  onClick={() => del.mutate(t.id)}
+                  onClick={() => { if (window.confirm("Hapus tugas ini?")) del.mutate(t.id); }}
                   disabled={del.isPending}
                   className="text-muted-foreground/40 hover:text-destructive shrink-0 mt-0.5 transition-colors"
                 >

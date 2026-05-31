@@ -26,6 +26,14 @@ export function generateInviteCode() {
   return out;
 }
 
+export function normalizePhone(phone?: string | null) {
+  if (!phone) return "62";
+  let cleaned = phone.replace(/\D/g, "");
+  if (cleaned.startsWith("62")) return cleaned;
+  if (cleaned.startsWith("0")) return "62" + cleaned.slice(1);
+  return "62" + cleaned;
+}
+
 export function initials(name?: string | null) {
   if (!name) return "?";
   return name

@@ -26,6 +26,7 @@ type AuthContextValue = {
   family: Family | null;
   loading: boolean;
   refresh: () => Promise<Profile | null>;
+  setFamilyDirect: (family: Family) => void;
   signOut: () => Promise<void>;
 };
 
@@ -39,11 +40,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
 
   const loadProfile = async (userId: string): Promise<Profile | null> => {
-    const { data: prof } = await supabase
+    let { data: prof } = await supabase
       .from("profiles")
       .select("id,email,full_name,avatar_url,phone_number,family_id,role")
       .eq("id", userId)
       .maybeSingle();
+
+    // OAuth fallback: profile may not exist yet for Google sign-in users.
+    // Call ensure_profile RPC to create the profile row if missing.
+    if (!prof) {
+      await supabase.rpc("ensure_profile");
+      await new Promise((r) => setTimeout(r, 200));
+      const { data: refetched } = await supabase
+        .from("profiles")
+        .select("id,email,full_name,avatar_url,phone_number,family_id,role")
+        .eq("id", userId)
+        .maybeSingle();
+      prof = refetched;
+    }
+
     const p = prof as Profile | null;
     setProfile(p);
 
@@ -64,7 +79,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const refresh = async (): Promise<Profile | null> => {
     if (!session?.user) return null;
-    return loadProfile(session.user.id);
+    // Retry once with a small delay in case of replication lag after DB writes
+    let prof = await loadProfile(session.user.id);
+    if (!prof?.family_id) {
+      await new Promise((r) => setTimeout(r, 300));
+      prof = await loadProfile(session.user.id);
+    }
+    return prof;
   };
 
   useEffect(() => {
@@ -73,16 +94,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, newSession) => {
       setSession(newSession);
       if (newSession?.user) {
-        setTimeout(() => {
-          loadProfile(newSession.user.id);
-        }, 0);
+        loadProfile(newSession.user.id).finally(() => {
+          if (!initialEventFired) {
+            initialEventFired = true;
+            setLoading(false);
+          }
+        });
       } else {
         setProfile(null);
         setFamily(null);
-      }
-      if (!initialEventFired) {
-        initialEventFired = true;
-        if (!newSession?.user) setLoading(false);
+        if (!initialEventFired) {
+          initialEventFired = true;
+          setLoading(false);
+        }
       }
       router.invalidate();
     });
@@ -90,7 +114,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session);
       if (data.session?.user) {
-        loadProfile(data.session.user.id).finally(() => setLoading(false));
+        if (!initialEventFired) {
+          loadProfile(data.session.user.id).finally(() => {
+            if (!initialEventFired) {
+              initialEventFired = true;
+              setLoading(false);
+            }
+          });
+        }
       } else if (!initialEventFired) {
         // Wait for onAuthStateChange to fire before giving up.
         // This handles OAuth hash processing race condition.
@@ -107,6 +138,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const setFamilyDirect = (fam: Family) => {
+    // Update profile's family_id in state so we don't rely on DB refresh
+    setProfile((prev) => prev ? { ...prev, family_id: fam.id } : null);
+    setFamily(fam);
+  };
+
   const signOut = async () => {
     await supabase.auth.signOut();
     setProfile(null);
@@ -115,7 +152,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ session, user: session?.user ?? null, profile, family, loading, refresh, signOut }}
+      value={{ session, user: session?.user ?? null, profile, family, loading, refresh, setFamilyDirect, signOut }}
     >
       {children}
     </AuthContext.Provider>

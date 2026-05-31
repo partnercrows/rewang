@@ -9,7 +9,8 @@ import { initials, cn } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
 import { enUS } from "date-fns/locale";
-import { Calendar as CalendarIcon, Filter, X } from "lucide-react";
+import { Calendar as CalendarIcon, Filter, X, RotateCcw } from "lucide-react";
+import { type DateRange } from "react-day-picker";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
@@ -69,8 +70,7 @@ function FeedPage() {
   const familyId = family?.id;
   const qc = useQueryClient();
 
-  const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined);
-  const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [selectedMember, setSelectedMember] = useState<string | null>(null);
 
   // Fetch family members for filter
@@ -91,7 +91,7 @@ function FeedPage() {
   const avatarMap = new Map(members.map((m: any) => [m.id, m.avatar_url]));
 
   const { data: feed = [], isLoading } = useQuery({
-    queryKey: ["feed", familyId, dateFrom?.toISOString(), dateTo?.toISOString(), selectedMember],
+    queryKey: ["feed", familyId, dateRange?.from?.toISOString(), dateRange?.to?.toISOString(), selectedMember],
     enabled: !!familyId,
     queryFn: async () => {
       let query = supabase
@@ -102,9 +102,9 @@ function FeedPage() {
         .order("created_at", { ascending: false })
         .limit(100);
 
-      if (dateFrom) query = query.gte("created_at", dateFrom.toISOString());
-      if (dateTo) {
-        const endOfDay = new Date(dateTo);
+      if (dateRange?.from) query = query.gte("created_at", dateRange.from.toISOString());
+      if (dateRange?.to) {
+        const endOfDay = new Date(dateRange.to);
         endOfDay.setHours(23, 59, 59, 999);
         query = query.lte("created_at", endOfDay.toISOString());
       }
@@ -148,32 +148,25 @@ function FeedPage() {
         <Popover>
           <PopoverTrigger asChild>
             <Button
-              variant={dateFrom || dateTo ? "default" : "outline"}
+              variant={dateRange?.from || dateRange?.to ? "default" : "outline"}
               size="sm"
               className="h-9 rounded-xl gap-1.5 shrink-0 text-xs"
             >
               <CalendarIcon className="h-3.5 w-3.5" />
-              {dateFrom && dateTo
-                ? `${dateFrom.toLocaleDateString("id", { day: "numeric", month: "short" })} - ${dateTo.toLocaleDateString("id", { day: "numeric", month: "short" })}`
-                : dateFrom
-                  ? `≥ ${dateFrom.toLocaleDateString("id", { day: "numeric", month: "short" })}`
-                  : dateTo
-                    ? `≤ ${dateTo.toLocaleDateString("id", { day: "numeric", month: "short" })}`
+              {dateRange?.from && dateRange?.to
+                ? `${dateRange.from.toLocaleDateString("id", { day: "numeric", month: "short" })} - ${dateRange.to.toLocaleDateString("id", { day: "numeric", month: "short" })}`
+                : dateRange?.from
+                  ? `≥ ${dateRange.from.toLocaleDateString("id", { day: "numeric", month: "short" })}`
+                  : dateRange?.to
+                    ? `≤ ${dateRange.to.toLocaleDateString("id", { day: "numeric", month: "short" })}`
                     : T("Tanggal")}
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-auto p-0" align="start">
             <div className="p-3 space-y-3">
-              <div>
-                <p className="text-xs font-medium mb-1.5">{T("Dari")}</p>
-                <Calendar mode="single" selected={dateFrom} onSelect={setDateFrom} initialFocus />
-              </div>
-              <div className="border-t pt-3">
-                <p className="text-xs font-medium mb-1.5">{T("Sampai")}</p>
-                <Calendar mode="single" selected={dateTo} onSelect={setDateTo} month={dateFrom ? new Date(dateFrom.getFullYear(), dateFrom.getMonth() + 1) : undefined} />
-              </div>
-              {(dateFrom || dateTo) && (
-                <Button variant="ghost" size="sm" className="w-full text-xs" onClick={() => { setDateFrom(undefined); setDateTo(undefined); }}>
+              <Calendar mode="range" selected={dateRange} onSelect={setDateRange} numberOfMonths={1} />
+              {(dateRange?.from || dateRange?.to) && (
+                <Button variant="ghost" size="sm" className="w-full text-xs" onClick={() => setDateRange(undefined)}>
                   <X className="h-3 w-3 mr-1" /> {T("Hapus tanggal")}
                 </Button>
               )}
@@ -224,6 +217,19 @@ function FeedPage() {
             </div>
           </PopoverContent>
         </Popover>
+
+        {/* Reset filter button */}
+        {(dateRange?.from || dateRange?.to || selectedMember) && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-9 rounded-xl gap-1.5 shrink-0 text-xs text-muted-foreground hover:text-destructive"
+            onClick={() => { setDateRange(undefined); setSelectedMember(null); }}
+          >
+            <RotateCcw className="h-3.5 w-3.5" />
+            {T("Reset")}
+          </Button>
+        )}
       </div>
 
       {/* --- Feed list --- */}

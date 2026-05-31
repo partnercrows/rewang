@@ -8,7 +8,7 @@ import { formatRupiah, daysUntil, initials, cn } from "@/lib/utils";
 import {
   Package, ReceiptText, TrendingDown, Coins, Calendar, Pin, Trash2,
   Cake, BookOpen, GraduationCap, BellRing, Sparkles, CheckCircle2, Trophy, Zap,
-  Check, Circle, Flame, StickyNote, Plus, Repeat, X,
+  Check, Circle, Flame, StickyNote, Plus, Repeat, X, UtensilsCrossed,
 } from "lucide-react";
 import { QuickAddSheet } from "@/components/home/QuickAddSheet";
 import { Button } from "@/components/ui/button";
@@ -135,9 +135,9 @@ function BerandaPage() {
       <SectionHeader title={T("Aktivitas Hari Ini", "Today's Tasks")} />
       <TodayTasksSimple familyId={familyId!} />
 
-      {/* Achievements */}
-      <SectionHeader title={T("Pencapaian rumah", "Home achievements")} />
-      <Achievements stats={stats} />
+      {/* Resep */}
+      <SectionHeader title={T("Resep", "Recipes")} />
+      <RecipePreview familyId={familyId!} />
 
       <QuickAddSheet />
     </MainLayout>
@@ -302,7 +302,7 @@ function TodayTasksSimple({ familyId }: { familyId: string }) {
 
               {/* Delete button */}
               <button
-                onClick={() => deleteTask.mutate(t.id)}
+                onClick={() => { if (window.confirm("Hapus tugas ini?")) deleteTask.mutate(t.id); }}
                 disabled={deleteTask.isPending}
                 className="text-muted-foreground/50 hover:text-destructive shrink-0 p-1"
               >
@@ -524,7 +524,7 @@ function AgendaSection({ familyId }: { familyId: string }) {
                   <Icon className="h-4 w-4 hidden" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-sm truncate">{a.title}</p>
+                  <p className="font-semibold text-sm line-clamp-2">{a.title}</p>
                   <p className="text-[11px] text-muted-foreground capitalize">{String(a.event_type).replace("_", " ")}</p>
                 </div>
                 <span className="text-xs font-semibold text-primary shrink-0">
@@ -615,7 +615,7 @@ function QuickNotesCard({ familyId }: { familyId: string }) {
               <button onClick={() => togglePin.mutate(n)} className={cn("absolute top-1.5 right-7", n.is_pinned ? "text-warning" : "text-muted-foreground/60 hover:text-warning")}>
                 <Pin className={cn("h-3.5 w-3.5", n.is_pinned && "fill-current")} />
               </button>
-              <button onClick={() => del.mutate(n.id)} className="absolute top-1.5 right-1.5 text-muted-foreground/60 hover:text-destructive">
+              <button onClick={() => { if (window.confirm("Hapus catatan ini?")) del.mutate(n.id); }} className="absolute top-1.5 right-1.5 text-muted-foreground/60 hover:text-destructive">
                 <Trash2 className="h-3.5 w-3.5" />
               </button>
               <p className="leading-snug break-words pr-10 text-[15px]">{n.content}</p>
@@ -625,6 +625,84 @@ function QuickNotesCard({ familyId }: { familyId: string }) {
         </div>
       )}
     </div>
+  );
+}
+
+function RecipePreview({ familyId }: { familyId: string }) {
+  const { T } = useLang();
+
+  const { data: recipes = [], isLoading } = useQuery({
+    queryKey: ["recipes-preview", familyId],
+    enabled: !!familyId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("recipes")
+        .select("id,title,image_url,category")
+        .eq("family_id", familyId)
+        .is("deleted_at", null)
+        .order("created_at", { ascending: false })
+        .limit(4);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  if (isLoading) {
+    return (
+      <div className="grid grid-cols-2 gap-3">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="bg-card border border-border rounded-xl overflow-hidden animate-pulse">
+            <div className="aspect-[4/3] bg-muted" />
+            <div className="p-2.5 space-y-1.5">
+              <div className="h-3 bg-muted rounded w-1/3" />
+              <div className="h-4 bg-muted rounded w-2/3" />
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (recipes.length === 0) {
+    return (
+      <p className="text-xs text-muted-foreground py-5 text-center bg-card border border-dashed border-border rounded-2xl">
+        {T("Belum ada resep", "No recipes yet")}
+      </p>
+    );
+  }
+
+  return (
+    <>
+      <div className="grid grid-cols-2 gap-3">
+        {recipes.map((r: any) => (
+          <div
+            key={r.id}
+            onClick={() => window.location.assign("/app/belanja?tab=recipe")}
+            className="bg-card border border-border rounded-xl overflow-hidden hover:shadow-md transition-shadow cursor-pointer"
+          >
+            <div className="aspect-[4/3] bg-muted overflow-hidden">
+              {r.image_url ? (
+                <img src={r.image_url} alt={r.title} className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs">
+                  <UtensilsCrossed className="h-6 w-6 opacity-30" />
+                </div>
+              )}
+            </div>
+            <div className="p-2.5">
+              <p className="text-[10px] text-primary font-semibold">{r.category}</p>
+              <p className="text-sm font-medium line-clamp-2 leading-snug">{r.title}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+      <Button asChild variant="secondary" size="sm" className="w-full mt-2 rounded-xl">
+        <Link to="/app/belanja" search={{ tab: "recipe" }}>
+          <UtensilsCrossed className="h-4 w-4 mr-2" />
+          {T("Lihat Semua Resep", "View All Recipes")}
+        </Link>
+      </Button>
+    </>
   );
 }
 

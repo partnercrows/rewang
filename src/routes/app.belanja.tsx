@@ -1,8 +1,8 @@
-import { createFileRoute, useSearch } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { useAuth } from "@/hooks/useAuth";
 import { useLang } from "@/hooks/useLang";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -11,15 +11,15 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Trash2, Minus, Search, Edit2, ShoppingCart, Star, Package } from "lucide-react";
-import { useState, useMemo } from "react";
+import { Plus, Trash2, Minus, Search, Edit2, ShoppingCart, Star, Package, UtensilsCrossed, Image as ImageIcon } from "lucide-react";
+import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { cn, formatRupiah } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
 
-async function tryFeedInsert(payload: Record<string, unknown>) {
-  try { await supabase.from("activity_feed").insert(payload); } catch {}
+async function tryFeedInsert(payload: any) {
+  try { await supabase.from("activity_feed").insert(payload as any); } catch {}
 }
 export const Route = createFileRoute("/app/belanja")({
   head: () => ({ meta: [{ title: "Belanja — Rewang" }] }),
@@ -28,21 +28,24 @@ export const Route = createFileRoute("/app/belanja")({
 
 const DEFAULT_CATEGORIES = ["Groceries", "Home Care", "Hair Care", "Bayi", "Dapur", "Lainnya"];
 const UNITS = ["pcs", "kg", "liter", "botol", "tabung"];
+const RECIPES_PER_PAGE = 12;
 
 function BelanjaPage() {
   const { T } = useLang();
   const params = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "");
-  const initialTab = params.get("tab") === "wishlist" ? "wishlist" : "stock";
+  const initialTab = params.get("tab") === "wishlist" ? "wishlist" : params.get("tab") === "recipe" ? "recipe" : "stock";
   const [activeTab, setActiveTab] = useState(initialTab);
 
   return (
     <MainLayout title={T("Belanja")}>
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="stock" className="data-[state=active]:font-extrabold data-[state=active]:scale-[1.02] data-[state=active]:shadow-md transition-all"><Package className="h-4 w-4 mr-2" />{T("Stok")}</TabsTrigger>
+          <TabsTrigger value="recipe" className="data-[state=active]:font-extrabold data-[state=active]:scale-[1.02] data-[state=active]:shadow-md transition-all"><UtensilsCrossed className="h-4 w-4 mr-2" />{T("Resep")}</TabsTrigger>
           <TabsTrigger value="wishlist" className="data-[state=active]:font-extrabold data-[state=active]:scale-[1.02] data-[state=active]:shadow-md transition-all"><Star className="h-4 w-4 mr-2" />{T("Wishlist")}</TabsTrigger>
         </TabsList>
         <TabsContent value="stock" className="mt-4"><StockTab /></TabsContent>
+        <TabsContent value="recipe" className="mt-4"><RecipeTab /></TabsContent>
         <TabsContent value="wishlist" className="mt-4"><WishlistTab /></TabsContent>
       </Tabs>
     </MainLayout>
@@ -53,6 +56,8 @@ function useFamilyId() {
   const { family } = useAuth();
   return family?.id;
 }
+
+// ==================== STOCK TAB ====================
 
 function StockTab() {
   const { T } = useLang();
@@ -174,6 +179,7 @@ function StockTab() {
           <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input className="pl-9" placeholder={T("Cari item...")} value={search} onChange={(e) => setSearch(e.target.value)} />
         </div>
+        <p className="text-xs font-semibold text-muted-foreground mb-0.5">{T("Kategori")}</p>
         <div className="flex gap-2 flex-wrap">
           {categoryChips.map((c) => (
             <button key={c} onClick={() => setFilter(c)} className={cn("px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap border", filter === c ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border text-muted-foreground")}>
@@ -182,9 +188,10 @@ function StockTab() {
           ))}
           <button onClick={() => setCatMgrOpen(true)} className="px-3 py-1.5 rounded-full text-xs font-medium border border-dashed border-border text-muted-foreground whitespace-nowrap">+ {T("Kategori")}</button>
         </div>
+        <p className="text-xs font-semibold text-muted-foreground mb-0.5 mt-1">{T("Ketersediaan")}</p>
         <div className="flex gap-2">
           {[T("Semua"), ...STATUSES].map((s) => (
-            <button key={s} onClick={() => setStatusFilter(s)} className={cn("px-2.5 py-1 rounded-full text-[11px] font-medium border", statusFilter === s ? "bg-secondary border-primary" : "bg-card border-border text-muted-foreground")}>
+            <button key={s} onClick={() => setStatusFilter(s)} className={cn("px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap border", statusFilter === s ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border text-muted-foreground")}>
               {s}
             </button>
           ))}
@@ -204,6 +211,15 @@ function StockTab() {
                     <StatusBadge status={item.status} />
                   </div>
                   <p className="text-[11px] text-muted-foreground">{item.category} · {T("min")} {item.min_stock} {item.unit}</p>
+                  <div className="mt-1.5">
+                    <div className="flex justify-between text-[10px] text-muted-foreground mb-0.5">
+                      <span>{qty}/{item.min_stock} {item.unit}</span>
+                      <span>{Math.min(100, Math.round((qty / (item.min_stock || 1)) * 100))}%</span>
+                    </div>
+                    <div className="h-2.5 rounded-full bg-muted overflow-hidden">
+                      <div className={cn("h-full rounded-full transition-all", (() => { const pct = Math.min(100, Math.round((qty / (item.min_stock || 1)) * 100)); if (pct >= 70) return "bg-success"; else if (pct >= 30) return "bg-warning"; else return "bg-destructive"; })())} style={{ width: `${Math.min(100, Math.round((qty / (item.min_stock || 1)) * 100))}%` }} />
+                    </div>
+                  </div>
                   {item.last_updated_by_name && (
                     <p className="text-[10px] text-muted-foreground mt-0.5">{T("Diupdate oleh")} {item.last_updated_by_name} · {formatDistanceToNow(new Date(item.updated_at), { addSuffix: true, locale: idLocale })}</p>
                   )}
@@ -217,7 +233,7 @@ function StockTab() {
               <div className="flex gap-1 mt-2 pt-2 border-t border-border">
                 <Button size="sm" variant="ghost" className="h-7 text-xs flex-1" onClick={() => updateQty.mutate({ id: item.id, mark: "empty" })}>{T("Habiskan")}</Button>
                 <Button size="sm" variant="ghost" className="h-7 text-xs flex-1" onClick={() => setEdit(item)}><Edit2 className="h-3 w-3 mr-1" />{T("Edit")}</Button>
-                <Button size="sm" variant="ghost" className="h-7 text-xs text-destructive" onClick={() => removeItem.mutate(item.id)}><Trash2 className="h-3 w-3" /></Button>
+                <Button size="sm" variant="ghost" className="h-7 text-xs text-destructive" onClick={() => { if (window.confirm(T("Hapus item ini?"))) removeItem.mutate(item.id); }}><Trash2 className="h-3 w-3" /></Button>
               </div>
             </div>
           );
@@ -236,7 +252,7 @@ function StockTab() {
         </DialogContent>
       </Dialog>
 
-      <CategoryManager open={catMgrOpen} onOpenChange={setCatMgrOpen} familyId={familyId!} categories={cats} />
+      <CategoryManager open={catMgrOpen} onOpenChange={setCatMgrOpen} familyId={familyId!} categories={cats} type="shopping" />
     </>
   );
 }
@@ -255,12 +271,12 @@ function StockForm({ initial, categories, onSubmit, busy }: { initial: any; cate
   const { T } = useLang();
   const [item_name, setName] = useState(initial?.item_name ?? "");
   const [category, setCategory] = useState(initial?.category ?? categories[0] ?? "Lainnya");
-  const [qty, setQty] = useState<number>(Number(initial?.quantity_decimal ?? initial?.current_stock ?? 1));
-  const [min, setMin] = useState<number>(initial?.min_stock ?? 1);
+  const [qty, setQty] = useState(initial ? String(initial.quantity_decimal ?? initial.current_stock ?? "") : "");
+  const [min, setMin] = useState(initial ? String(initial.min_stock ?? "") : "");
   const [unit, setUnit] = useState(initial?.unit ?? "pcs");
 
   return (
-    <form onSubmit={(e) => { e.preventDefault(); onSubmit({ id: initial?.id, item_name, category, qty, min, unit }); }} className="space-y-3">
+    <form onSubmit={(e) => { e.preventDefault(); onSubmit({ id: initial?.id, item_name, category, qty: parseFloat(qty) || 0, min: parseFloat(min) || 0, unit }); }} className="space-y-3">
       <div><Label>{T("Nama item")}</Label><Input required value={item_name} onChange={(e) => setName(e.target.value)} /></div>
       <div className="grid grid-cols-2 gap-2">
         <div><Label>{T("Kategori")}</Label>
@@ -277,58 +293,328 @@ function StockForm({ initial, categories, onSubmit, busy }: { initial: any; cate
         </div>
       </div>
       <div className="grid grid-cols-2 gap-2">
-        <div><Label>{T("Jumlah")}</Label><Input required type="number" step="0.1" min={0} value={qty} onChange={(e) => setQty(parseFloat(e.target.value) || 0)} /></div>
-        <div><Label>{T("Stok minimum")}</Label><Input required type="number" step="0.1" min={0} value={min} onChange={(e) => setMin(parseFloat(e.target.value) || 0)} /></div>
+        <div><Label>{T("Jumlah")}</Label><Input required type="number" step="0.1" min={0} placeholder="0" value={qty} onChange={(e) => setQty(e.target.value)} /></div>
+        <div><Label>{T("Stok minimum")}</Label><Input required type="number" step="0.1" min={0} placeholder="0" value={min} onChange={(e) => setMin(e.target.value)} /></div>
       </div>
       <Button type="submit" className="w-full" disabled={busy}>{T("Simpan")}</Button>
     </form>
   );
 }
 
-function CategoryManager({ open, onOpenChange, familyId, categories }: { open: boolean; onOpenChange: (v: boolean) => void; familyId: string; categories: any[] }) {
+// ==================== RECIPE TAB ====================
+
+function RecipeTab() {
   const { T } = useLang();
+  const familyId = useFamilyId();
+  const { profile } = useAuth();
   const qc = useQueryClient();
-  const [name, setName] = useState("");
-  const add = useMutation({
-    mutationFn: async () => {
-      if (!name.trim()) return;
-      const { error } = await supabase.from("shopping_categories").insert({ family_id: familyId, name: name.trim() });
-      if (error) throw error;
+  const [open, setOpen] = useState(false);
+  const [edit, setEdit] = useState<any>(null);
+  const [detail, setDetail] = useState<any>(null);
+  const [search, setSearch] = useState("");
+  const [filterCat, setFilterCat] = useState<string>(T("Semua"));
+  const [catMgrOpen, setCatMgrOpen] = useState(false);
+  const observerRef = useRef<IntersectionObserver | null>(null);
+
+  const { data: cats = [] } = useQuery({
+    queryKey: ["recipe-cats", familyId],
+    enabled: !!familyId,
+    queryFn: async () => {
+      const { data } = await (supabase.from as any)("recipe_categories").select("*").eq("family_id", familyId!).is("deleted_at", null).order("name");
+      return data ?? [];
     },
-    onSuccess: () => { setName(""); qc.invalidateQueries({ queryKey: ["shopping-cats", familyId] }); toast.success(T("Kategori ditambah")); },
-  });
-  const del = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from("shopping_categories").update({ deleted_at: new Date().toISOString() }).eq("id", id);
-      if (error) throw error;
-    },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["shopping-cats", familyId] }),
   });
 
+  const allCats = useMemo(() => cats.map((c: any) => c.name), [cats]);
+
+  const {
+    data,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoading,
+    isError,
+  } = useInfiniteQuery({
+    queryKey: ["recipes", familyId, search, filterCat],
+    enabled: !!familyId,
+    initialPageParam: 0,
+    queryFn: async ({ pageParam = 0 }) => {
+      let q = supabase
+        .from("recipes")
+        .select("*", { count: "exact" })
+        .eq("family_id", familyId!)
+        .is("deleted_at", null)
+        .order("created_at", { ascending: false })
+        .range(pageParam, pageParam + RECIPES_PER_PAGE - 1);
+
+      if (search) q = q.ilike("title", `%${search}%`);
+      if (filterCat !== T("Semua")) q = q.eq("category", filterCat);
+
+      const { data, error, count } = await q;
+      if (error) throw error;
+      return { data: data ?? [], nextPage: pageParam + RECIPES_PER_PAGE, hasMore: (count ?? 0) > pageParam + RECIPES_PER_PAGE };
+    },
+    getNextPageParam: (lastPage) => (lastPage.hasMore ? lastPage.nextPage : undefined),
+  });
+
+  const recipes = useMemo(() => data?.pages.flatMap((p) => p.data) ?? [], [data]);
+
+  const lastItemRef = useCallback(
+    (node: HTMLDivElement | null) => {
+      if (isFetchingNextPage) return;
+      if (observerRef.current) observerRef.current.disconnect();
+      observerRef.current = new IntersectionObserver((entries) => {
+        if (entries[0].isIntersecting && hasNextPage) {
+          fetchNextPage();
+        }
+      }, { threshold: 0.1 });
+      if (node) observerRef.current.observe(node);
+    },
+    [isFetchingNextPage, hasNextPage, fetchNextPage],
+  );
+
+  const upsertRecipe = useMutation({
+    mutationFn: async (vals: any) => {
+      const payload: any = {
+        family_id: familyId!,
+        title: vals.title,
+        category: vals.category,
+        image_url: vals.image_url || null,
+        description: vals.description || null,
+        created_by: profile?.id,
+      };
+      if (vals.id) {
+        const { error } = await supabase.from("recipes").update(payload).eq("id", vals.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("recipes").insert(payload);
+        if (error) throw error;
+      }
+    },
+    onSuccess: (_data, vals) => {
+      qc.invalidateQueries({ queryKey: ["recipes", familyId] });
+      toast.success(T("Resep tersimpan"));
+      setOpen(false);
+      setEdit(null);
+      tryFeedInsert({
+        family_id: familyId!, actor_id: profile?.id, actor_name: profile?.full_name ?? "",
+        action_type: "create", entity_type: "recipe",
+        description: vals.id ? `mengubah resep ${vals.title}` : `menambah resep ${vals.title}`,
+      });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const deleteRecipe = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("recipes").update({ deleted_at: new Date().toISOString() }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: (_data, id) => {
+      const recipe = recipes.find((r: any) => r.id === id);
+      qc.invalidateQueries({ queryKey: ["recipes", familyId] });
+      qc.invalidateQueries({ queryKey: ["beranda-stats", familyId] });
+      toast.success(T("Resep dihapus"));
+      setDetail(null);
+      if (recipe) {
+        tryFeedInsert({
+          family_id: familyId!, actor_id: profile?.id, actor_name: profile?.full_name ?? "",
+          action_type: "delete", entity_type: "recipe", description: `menghapus resep ${recipe.title}`,
+        });
+      }
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const categoryChips = [T("Semua"), ...allCats];
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader><DialogTitle>{T("Kelola kategori")}</DialogTitle></DialogHeader>
-        <div className="space-y-3">
-          <form onSubmit={(e) => { e.preventDefault(); add.mutate(); }} className="flex gap-2">
-            <Input placeholder={T("Nama kategori baru")} value={name} onChange={(e) => setName(e.target.value)} />
-            <Button type="submit" disabled={!name.trim() || add.isPending}>{T("Tambah")}</Button>
-          </form>
-          <div className="space-y-1">
-            <p className="text-xs text-muted-foreground">{T("Kategori bawaan tidak dapat dihapus.")}</p>
-            {DEFAULT_CATEGORIES.map((c) => <div key={c} className="text-sm px-3 py-2 bg-secondary/40 rounded-lg">{c} <span className="text-[10px] text-muted-foreground ml-1">{T("bawaan")}</span></div>)}
-            {categories.map((c: any) => (
-              <div key={c.id} className="flex items-center justify-between px-3 py-2 bg-card border border-border rounded-lg">
-                <span className="text-sm">{c.name}</span>
-                <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => del.mutate(c.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
-              </div>
-            ))}
-          </div>
+    <>
+      <div className="space-y-2 mb-3">
+        <div className="relative">
+          <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input className="pl-9" placeholder={T("Cari resep...")} value={search} onChange={(e) => setSearch(e.target.value)} />
         </div>
-      </DialogContent>
-    </Dialog>
+        <p className="text-xs font-semibold text-muted-foreground mb-0.5">{T("Kategori")}</p>
+        <div className="flex gap-2 flex-wrap">
+          {categoryChips.map((c) => (
+            <button key={c} onClick={() => setFilterCat(c)} className={cn("px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap border", filterCat === c ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border text-muted-foreground")}>
+              {c}
+            </button>
+          ))}
+          <button onClick={() => setCatMgrOpen(true)} className="px-3 py-1.5 rounded-full text-xs font-medium border border-dashed border-border text-muted-foreground whitespace-nowrap">+ {T("Kategori")}</button>
+        </div>
+      </div>
+
+      {isLoading && (
+        <div className="grid grid-cols-2 gap-3 mb-24">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="bg-card border border-border rounded-xl overflow-hidden animate-pulse">
+              <div className="aspect-square bg-muted" />
+              <div className="p-3 space-y-2">
+                <div className="h-3 w-16 bg-muted rounded" />
+                <div className="h-4 w-full bg-muted rounded" />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {isError && <p className="text-center py-12 text-destructive text-sm">{T("Gagal memuat resep")}</p>}
+
+      {!isLoading && !isError && recipes.length === 0 && (
+        <div className="text-center py-16 mb-24">
+          <UtensilsCrossed className="h-12 w-12 mx-auto text-muted-foreground/40 mb-3" />
+          <p className="text-muted-foreground text-sm">{T("Belum ada resep")}</p>
+          <p className="text-muted-foreground text-xs mt-1">{T("Tambahkan resep masakan favorit keluarga")}</p>
+        </div>
+      )}
+
+      {!isLoading && !isError && recipes.length > 0 && (
+        <div className="grid grid-cols-2 gap-3 mb-24">
+          {recipes.map((recipe: any, i: number) => {
+            const isLast = i === recipes.length - 1;
+            return (
+              <div
+                key={recipe.id}
+                ref={isLast ? lastItemRef : undefined}
+                className="bg-card border border-border rounded-xl overflow-hidden shadow-soft cursor-pointer hover:shadow-md transition-shadow active:scale-[0.98]"
+                onClick={() => setDetail(recipe)}
+              >
+                <div className="aspect-square bg-muted relative">
+                  {recipe.image_url ? (
+                    <img src={recipe.image_url} alt={recipe.title} className="w-full h-full object-cover" loading="lazy" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <ImageIcon className="h-10 w-10 text-muted-foreground/30" />
+                    </div>
+                  )}
+                  {recipe.category && (
+                    <span className="absolute top-2 left-2 px-2 py-0.5 rounded-full text-[10px] font-medium bg-background/80 backdrop-blur text-foreground">
+                      {recipe.category}
+                    </span>
+                  )}
+                </div>
+                <div className="p-2.5">
+                  <p className="font-semibold text-sm line-clamp-2 leading-tight">{recipe.title}</p>
+                  <p className="text-[10px] text-muted-foreground mt-1">
+                    {formatDistanceToNow(new Date(recipe.created_at), { addSuffix: true, locale: idLocale })}
+                  </p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {isFetchingNextPage && (
+        <div className="flex justify-center mb-24 pb-4">
+          <div className="h-5 w-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+        </div>
+      )}
+
+      {/* FAB Tambah Resep */}
+      <Dialog open={open || !!edit} onOpenChange={(v) => { if (!v) { setOpen(false); setEdit(null); } }}>
+        <DialogTrigger asChild>
+          <Button className="fixed bottom-24 left-1/2 -translate-x-1/2 shadow-card rounded-full h-12 px-5" size="lg" onClick={() => setOpen(true)}>
+            <Plus className="h-5 w-5 mr-1" /> {T("Tambah Resep")}
+          </Button>
+        </DialogTrigger>
+        <DialogContent>
+          <DialogHeader><DialogTitle>{edit ? T("Edit resep") : T("Resep baru")}</DialogTitle></DialogHeader>
+          <RecipeForm initial={edit} categories={allCats} onSubmit={(v) => upsertRecipe.mutate(v)} busy={upsertRecipe.isPending} />
+        </DialogContent>
+      </Dialog>
+
+      {/* Detail Dialog */}
+      <Dialog open={!!detail} onOpenChange={(o) => { if (!o) setDetail(null); }}>
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+          {detail && (
+            <>
+              <div className="aspect-video bg-muted rounded-lg overflow-hidden -mt-2">
+                {detail.image_url ? (
+                  <img src={detail.image_url} alt={detail.title} className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <ImageIcon className="h-12 w-12 text-muted-foreground/30" />
+                  </div>
+                )}
+              </div>
+              <DialogHeader className="mt-2">
+                {detail.category && (
+                  <span className="inline-block w-fit px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-primary/10 text-primary mb-1">
+                    {detail.category}
+                  </span>
+                )}
+                <DialogTitle className="text-lg">{detail.title}</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-3">
+                {detail.description && (
+                  <div>
+                    <p className="text-xs font-semibold text-muted-foreground mb-1">{T("Deskripsi")}</p>
+                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">{detail.description}</p>
+                  </div>
+                )}
+                <p className="text-[11px] text-muted-foreground">
+                  {T("Dibuat")} {formatDistanceToNow(new Date(detail.created_at), { addSuffix: true, locale: idLocale })}
+                  {detail.updated_at && detail.updated_at !== detail.created_at && ` · ${T("Diupdate")} ${formatDistanceToNow(new Date(detail.updated_at), { addSuffix: true, locale: idLocale })}`}
+                </p>
+              </div>
+              <DialogFooter className="flex gap-2 mt-2">
+                <Button variant="outline" className="flex-1" onClick={() => { setEdit(detail); setDetail(null); }}>
+                  <Edit2 className="h-4 w-4 mr-1" /> {T("Edit")}
+                </Button>
+                <Button variant="destructive" className="flex-1" onClick={() => { if (window.confirm(T("Hapus resep ini?"))) deleteRecipe.mutate(detail.id); }}>
+                  <Trash2 className="h-4 w-4 mr-1" /> {T("Hapus")}
+                </Button>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <CategoryManager open={catMgrOpen} onOpenChange={setCatMgrOpen} familyId={familyId!} categories={cats} type="recipe" />
+    </>
   );
 }
+
+function RecipeForm({ initial, categories, onSubmit, busy }: { initial: any; categories: string[]; onSubmit: (v: any) => void; busy: boolean }) {
+  const { T } = useLang();
+  const [title, setTitle] = useState(initial?.title ?? "");
+  const [category, setCategory] = useState(initial?.category ?? categories[0] ?? "");
+  const [image_url, setImageUrl] = useState(initial?.image_url ?? "");
+  const [description, setDescription] = useState(initial?.description ?? "");
+
+  // Sync category when categories load after dialog opens
+  useEffect(() => {
+    if (!initial?.category && categories.length > 0 && !categories.includes(category)) {
+      setCategory(categories[0]);
+    }
+  }, [categories, initial, category]);
+
+  // Determine the actual category value to pass to Select (must match a SelectItem)
+  const selectValue = categories.length > 0 && categories.includes(category) ? category : "";
+
+  return (
+    <form onSubmit={(e) => { e.preventDefault(); onSubmit({ id: initial?.id, title, category, image_url, description }); }} className="space-y-3">
+      <div><Label>{T("Judul")}</Label><Input required value={title} onChange={(e) => setTitle(e.target.value)} placeholder={T("Nama resep")} /></div>
+      <div><Label>{T("Kategori")}</Label>
+        <Select value={selectValue} onValueChange={setCategory}>
+          <SelectTrigger><SelectValue placeholder={T("Pilih kategori")} /></SelectTrigger>
+          <SelectContent>
+            {(categories.length === 0 || !categories.includes(category)) && <SelectItem value="" disabled>{T("Belum ada kategori")}</SelectItem>}
+            {categories.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+          </SelectContent>
+        </Select>
+      </div>
+      <div><Label>{T("URL Gambar")}</Label><Input value={image_url} onChange={(e) => setImageUrl(e.target.value)} placeholder="https://..." /></div>
+      <div><Label>{T("Deskripsi")}</Label><Textarea rows={3} value={description} onChange={(e) => setDescription(e.target.value)} placeholder={T("Bahan, langkah memasak...")} /></div>
+      <Button type="submit" className="w-full" disabled={busy}>{T("Simpan")}</Button>
+    </form>
+  );
+}
+
+// ==================== WISHLIST TAB ====================
 
 function WishlistTab() {
   const { T } = useLang();
@@ -383,7 +669,7 @@ function WishlistTab() {
                 <p className="text-xs text-primary font-medium mt-0.5">{formatRupiah(w.estimated_price ?? 0)}</p>
                 {w.notes && <p className="text-[11px] text-muted-foreground mt-1">{w.notes}</p>}
               </div>
-              <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={() => del.mutate(w.id)}><Trash2 className="h-4 w-4" /></Button>
+              <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={() => { if (window.confirm(T("Hapus item ini?"))) del.mutate(w.id); }}><Trash2 className="h-4 w-4" /></Button>
             </div>
             <Button size="sm" variant="outline" className="w-full mt-2" onClick={() => buy.mutate(w)}>
               <ShoppingCart className="h-3.5 w-3.5 mr-1" /> {T("Sudah dibeli → pindah ke stok")}
@@ -413,14 +699,14 @@ function PriorityBadge({ p }: { p: string }) {
 function WishlistForm({ onSubmit, busy }: { onSubmit: (v: any) => void; busy: boolean }) {
   const { T } = useLang();
   const [item_name, setName] = useState("");
-  const [estimated_price, setPrice] = useState(0);
+  const [estimated_price, setPrice] = useState("");
   const [priority, setPriority] = useState("medium");
   const [notes, setNotes] = useState("");
   return (
-    <form onSubmit={(e) => { e.preventDefault(); onSubmit({ item_name, estimated_price, priority, notes }); }} className="space-y-3">
+    <form onSubmit={(e) => { e.preventDefault(); onSubmit({ item_name, estimated_price: parseFloat(estimated_price) || 0, priority, notes }); }} className="space-y-3">
       <div><Label>{T("Nama item")}</Label><Input required value={item_name} onChange={(e) => setName(e.target.value)} /></div>
       <div className="grid grid-cols-2 gap-2">
-        <div><Label>{T("Harga estimasi")}</Label><Input type="number" min={0} value={estimated_price} onChange={(e) => setPrice(parseFloat(e.target.value) || 0)} /></div>
+        <div><Label>{T("Harga estimasi")}</Label><Input type="number" min={0} placeholder="0" value={estimated_price} onChange={(e) => setPrice(e.target.value)} /></div>
         <div><Label>{T("Prioritas")}</Label>
           <Select value={priority} onValueChange={setPriority}>
             <SelectTrigger><SelectValue /></SelectTrigger>
@@ -431,5 +717,57 @@ function WishlistForm({ onSubmit, busy }: { onSubmit: (v: any) => void; busy: bo
       <div><Label>{T("Catatan")}</Label><Textarea rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} /></div>
       <DialogFooter><Button type="submit" className="w-full" disabled={busy}>{T("Simpan")}</Button></DialogFooter>
     </form>
+  );
+}
+
+// ==================== CATEGORY MANAGER (shared) ====================
+
+function CategoryManager({ open, onOpenChange, familyId, categories, type }: { open: boolean; onOpenChange: (v: boolean) => void; familyId: string; categories: any[]; type: "shopping" | "recipe" }) {
+  const { T } = useLang();
+  const qc = useQueryClient();
+  const [name, setName] = useState("");
+  const tableName = type === "recipe" ? "recipe_categories" : "shopping_categories";
+  const queryKey = type === "recipe" ? ["recipe-cats", familyId] : ["shopping-cats", familyId];
+
+  const add = useMutation({
+    mutationFn: async () => {
+      if (!name.trim()) return;
+      const { error } = await (supabase.from as any)(tableName).insert({ family_id: familyId, name: name.trim() });
+      if (error) throw error;
+    },
+    onSuccess: () => { setName(""); qc.invalidateQueries({ queryKey }); toast.success(T("Kategori ditambah")); },
+  });
+
+  const del = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await (supabase.from as any)(tableName).update({ deleted_at: new Date().toISOString() }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey }),
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader><DialogTitle>{T("Kelola kategori")}</DialogTitle></DialogHeader>
+        <div className="space-y-3">
+          <form onSubmit={(e) => { e.preventDefault(); add.mutate(); }} className="flex gap-2">
+            <Input placeholder={T("Nama kategori baru")} value={name} onChange={(e) => setName(e.target.value)} />
+            <Button type="submit" disabled={!name.trim() || add.isPending}>{T("Tambah")}</Button>
+          </form>
+          <div className="space-y-1">
+            {type === "shopping" && <p className="text-xs text-muted-foreground">{T("Kategori bawaan tidak dapat dihapus.")}</p>}
+            {type === "shopping" && DEFAULT_CATEGORIES.map((c) => <div key={c} className="text-sm px-3 py-2 bg-secondary/40 rounded-lg">{c} <span className="text-[10px] text-muted-foreground ml-1">{T("bawaan")}</span></div>)}
+            {categories.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">{T("Belum ada kategori")}</p>}
+            {categories.map((c: any) => (
+              <div key={c.id} className="flex items-center justify-between px-3 py-2 bg-card border border-border rounded-lg">
+                <span className="text-sm">{c.name}</span>
+                <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => { if (window.confirm(T("Hapus kategori ini?"))) del.mutate(c.id); }}><Trash2 className="h-3.5 w-3.5" /></Button>
+              </div>
+            ))}
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }

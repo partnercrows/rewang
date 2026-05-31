@@ -613,6 +613,63 @@ export type Database = {
           },
         ]
       }
+      recipes: {
+        Row: {
+          category: string
+          created_at: string
+          created_by: string | null
+          created_by_name: string | null
+          deleted_at: string | null
+          description: string | null
+          family_id: string
+          id: string
+          image_url: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          created_by_name?: string | null
+          deleted_at?: string | null
+          description?: string | null
+          family_id: string
+          id?: string
+          image_url?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          created_by_name?: string | null
+          deleted_at?: string | null
+          description?: string | null
+          family_id?: string
+          id?: string
+          image_url?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recipes_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recipes_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       quick_notes: {
         Row: {
           content: string
@@ -811,6 +868,22 @@ export type Database = {
         Returns: undefined
       }
       current_family_id: { Args: never; Returns: string }
+      ensure_profile: {
+        Args: never
+        Returns: {
+          id: string
+          email: string
+          full_name: string
+          avatar_url: string | null
+          phone_number: string | null
+          family_id: string | null
+          role: string
+          created_at: string
+          updated_at: string
+          deleted_at: string | null
+          last_active_at: string | null
+        }
+      }
       join_family_by_code: {
         Args: { _invite_code: string }
         Returns: {

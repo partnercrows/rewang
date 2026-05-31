@@ -1,10 +1,11 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { z } from "zod";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { useAuth } from "@/hooks/useAuth";
 import { useLang } from "@/hooks/useLang";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { formatRupiah, cn, daysUntil } from "@/lib/utils";
+import { formatRupiah, cn, daysUntil, normalizePhone } from "@/lib/utils";
 import { useState, useMemo } from "react";
 import { toast } from "sonner";
 import {
@@ -24,8 +25,13 @@ async function tryFeedInsert(payload: Record<string, unknown>) {
   try { await supabase.from("activity_feed").insert(payload); } catch {}
 }
 
+const keuanganSearchSchema = z.object({
+  tab: z.enum(["tagihan", "hutang-piutang"]).optional().default("tagihan"),
+});
+
 export const Route = createFileRoute("/app/keuangan")({
   head: () => ({ meta: [{ title: "Keuangan — Rewang" }] }),
+  validateSearch: keuanganSearchSchema,
   component: KeuanganPage,
 });
 
@@ -34,7 +40,9 @@ function KeuanganPage() {
   const { T } = useLang();
   const familyId = family?.id;
   const qc = useQueryClient();
-  const [tab, setTab] = useState<"tagihan" | "hutang-piutang">("tagihan");
+  const navigate = useNavigate({ from: "/app/keuangan" });
+  const search = Route.useSearch();
+  const [tab, setTab] = useState<"tagihan" | "hutang-piutang">(search.tab);
   const [view, setView] = useState<"all" | "hutang" | "piutang">("all");
   const [billDialogOpen, setBillDialogOpen] = useState(false);
   const [debtDialogOpen, setDebtDialogOpen] = useState(false);
@@ -222,7 +230,7 @@ function KeuanganPage() {
       {/* Tab switcher — Tagihan (left), Hutang Piutang (right) */}
       <div className="flex gap-2 mb-4">
         <button
-          onClick={() => setTab("tagihan")}
+          onClick={() => { setTab("tagihan"); navigate({ search: { tab: "tagihan" }, replace: true }); }}
           className={cn(
             "flex-1 px-4 py-2.5 rounded-xl text-sm font-medium border transition-all",
             tab === "tagihan"
@@ -234,7 +242,7 @@ function KeuanganPage() {
           {T("Tagihan", "Bills")} {unpaidBills.length > 0 && <span className="ml-1 text-xs opacity-80">({unpaidBills.length})</span>}
         </button>
         <button
-          onClick={() => setTab("hutang-piutang")}
+          onClick={() => { setTab("hutang-piutang"); navigate({ search: { tab: "hutang-piutang" }, replace: true }); }}
           className={cn(
             "flex-1 px-4 py-2.5 rounded-xl text-sm font-medium border transition-all",
             tab === "hutang-piutang"
@@ -424,7 +432,7 @@ function BillCard({
         </div>
 
         <div className="flex flex-col items-end gap-1.5 shrink-0 ml-3">
-          <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={() => onDelete(bill.id)}>
+          <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={() => { if (window.confirm("Hapus tagihan ini?")) onDelete(bill.id); }}>
             <Trash2 className="h-3.5 w-3.5" />
           </Button>
 
@@ -465,7 +473,7 @@ function BillCard({
 function AddBillForm({ onSubmit, busy }: { onSubmit: (v: any) => void; busy: boolean }) {
   const { T } = useLang();
   const [bill_name, setName] = useState("");
-  const [nominal, setNominal] = useState(0);
+  const [nominal, setNominal] = useState("");
   const [due_date, setDueDate] = useState(new Date().toISOString().slice(0, 10));
   const [is_recurring, setIsRecurring] = useState(false);
   const [bill_type, setBillType] = useState("tagihan");
@@ -475,7 +483,7 @@ function AddBillForm({ onSubmit, busy }: { onSubmit: (v: any) => void; busy: boo
     <form
       onSubmit={(e) => {
         e.preventDefault();
-        onSubmit({ bill_name, nominal, due_date, is_recurring, bill_type, notes: notes.trim() || null, is_paid: false });
+        onSubmit({ bill_name, nominal: Number(nominal) || 0, due_date, is_recurring, bill_type, notes: notes.trim() || null, is_paid: false });
       }}
       className="space-y-3"
     >
@@ -486,7 +494,7 @@ function AddBillForm({ onSubmit, busy }: { onSubmit: (v: any) => void; busy: boo
       <div className="grid grid-cols-2 gap-2">
         <div>
           <Label>{T("Nominal (Rp)", "Amount (Rp)")}</Label>
-          <Input required type="number" min={0} value={nominal} onChange={(e) => setNominal(parseFloat(e.target.value) || 0)} />
+          <Input required type="number" min={0} value={nominal} onChange={(e) => setNominal(e.target.value)} placeholder="0" />
         </div>
         <div>
           <Label>{T("Jatuh Tempo", "Due Date")}</Label>
@@ -519,7 +527,7 @@ function AddBillForm({ onSubmit, busy }: { onSubmit: (v: any) => void; busy: boo
         <Label>{T("Catatan", "Notes")}</Label>
         <Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder={T("Opsional", "Optional")} />
       </div>
-      <Button type="submit" className="w-full" disabled={busy || !bill_name.trim() || nominal <= 0}>
+      <Button type="submit" className="w-full" disabled={busy || !bill_name.trim() || !nominal || Number(nominal) <= 0}>
         {T("Simpan", "Save")}
       </Button>
     </form>
@@ -685,7 +693,7 @@ function DebtCard({
           <Button size="icon" variant="ghost" className="h-8 w-8" onClick={exportPDF} title="Unduh PDF">
             <FileDown className="h-4 w-4 text-muted-foreground hover:text-primary" />
           </Button>
-          <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={() => onDelete(d.id)}>
+          <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={() => { if (window.confirm("Hapus catatan ini?")) onDelete(d.id); }}>
             <Trash2 className="h-4 w-4" />
           </Button>
         </div>
@@ -740,7 +748,7 @@ function DebtCard({
             {d.phone_number && (
               <Button asChild size="sm" variant="secondary">
                 <a
-                  href={`https://wa.me/${d.phone_number.replace(/\D/g, "")}?text=${waText}`}
+                  href={`https://wa.me/${normalizePhone(d.phone_number)}?text=${waText}`}
                   target="_blank"
                   rel="noreferrer"
                 >
@@ -793,13 +801,13 @@ function DebtCard({
 
               <div>
                 <Label>{T("Nominal (Rp)", "Amount (Rp)")}</Label>
-                <Input
+          <Input
                   type="number"
                   min={0}
                   max={remaining}
                   value={payAmt}
                   onChange={(e) => setPayAmt(e.target.value)}
-                  placeholder={`Maks ${formatRupiah(remaining)}`}
+                  placeholder="0"
                 />
                 {payAmt && parseFloat(payAmt) < remaining && (
                   <p className="text-[11px] text-muted-foreground mt-1">
@@ -869,15 +877,15 @@ function AddDebtForm({ onSubmit, busy }: { onSubmit: (v: any) => void; busy: boo
   const [person_name, setName] = useState("");
   const [phone_number, setPhone] = useState("");
   const [address, setAddress] = useState("");
-  const [total_amount, setAmt] = useState(0);
-  const [monthly_installment, setInst] = useState(0);
+  const [total_amount, setAmt] = useState("");
+  const [monthly_installment, setInst] = useState("");
   const [start_date, setDate] = useState(new Date().toISOString().slice(0, 10));
 
   return (
     <form
       onSubmit={(e) => {
         e.preventDefault();
-        onSubmit({ type, person_name, phone_number, address, total_amount, monthly_installment, start_date });
+        onSubmit({ type, person_name, phone_number, address, total_amount: Number(total_amount) || 0, monthly_installment: Number(monthly_installment) || 0, start_date });
       }}
       className="space-y-3"
     >
@@ -906,11 +914,11 @@ function AddDebtForm({ onSubmit, busy }: { onSubmit: (v: any) => void; busy: boo
       <div className="grid grid-cols-2 gap-2">
         <div>
           <Label>{T("Total (Rp)", "Total (Rp)")}</Label>
-          <Input required type="number" min={0} value={total_amount} onChange={(e) => setAmt(parseFloat(e.target.value) || 0)} />
+          <Input required type="number" min={0} value={total_amount} onChange={(e) => setAmt(e.target.value)} placeholder="0" />
         </div>
         <div>
           <Label>{T("Cicilan/bln", "Installment/mo")}</Label>
-          <Input type="number" min={0} value={monthly_installment} onChange={(e) => setInst(parseFloat(e.target.value) || 0)} />
+          <Input type="number" min={0} value={monthly_installment} onChange={(e) => setInst(e.target.value)} placeholder="0" />
         </div>
       </div>
       <div>

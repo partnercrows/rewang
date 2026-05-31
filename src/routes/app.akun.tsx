@@ -17,7 +17,7 @@ import {
   Plus, Trash2, ExternalLink, Camera, Heart, Settings as Cog, ShieldCheck, Crown,
   Sun, Moon, Globe, Lock, Eye, EyeOff, ChevronDown, ChevronUp,
 } from "lucide-react";
-import { cn, initials } from "@/lib/utils";
+import { cn, initials, normalizePhone } from "@/lib/utils";
 import { useTheme } from "@/hooks/useTheme";
 import { useLang } from "@/hooks/useLang";
 
@@ -113,11 +113,11 @@ function ProfileSection() {
       <div className="space-y-2 bg-white/10 backdrop-blur rounded-2xl p-3">
         <div>
           <Label className="text-primary-foreground/80 text-xs">Nama lengkap</Label>
-          <Input value={fullName} onChange={(e) => setFullName(e.target.value)} className="bg-white/95 text-foreground" />
+          <Input value={fullName} onChange={(e) => setFullName(e.target.value)} className="bg-white/95 text-gray-900" />
         </div>
         <div>
           <Label className="text-primary-foreground/80 text-xs">No. Telepon</Label>
-          <Input value={phone} onChange={(e) => setPhone(e.target.value)} className="bg-white/95 text-foreground" />
+          <Input value={phone} onChange={(e) => setPhone(e.target.value)} className="bg-white/95 text-gray-900" />
         </div>
         <Button variant="secondary" onClick={save} disabled={busy} className="w-full">Simpan profil</Button>
       </div>
@@ -266,8 +266,8 @@ function EmergencyContactsSection({ familyId }: { familyId?: string }) {
               {c.notes && <p className="text-[11px] text-muted-foreground mt-0.5 truncate">{c.notes}</p>}
             </div>
             <Button asChild size="icon" variant="outline" className="h-8 w-8"><a href={`tel:${c.phone}`}><Phone className="h-4 w-4" /></a></Button>
-            <Button asChild size="icon" variant="outline" className="h-8 w-8"><a href={`https://wa.me/${c.phone.replace(/\D/g, "")}`} target="_blank" rel="noreferrer"><MessageCircle className="h-4 w-4" /></a></Button>
-            <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={() => del.mutate(c.id)}><Trash2 className="h-4 w-4" /></Button>
+<Button asChild size="icon" variant="outline" className="h-8 w-8"><a href={`https://wa.me/${normalizePhone(c.phone)}`} target="_blank" rel="noreferrer"><MessageCircle className="h-4 w-4" /></a></Button>
+            <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={() => { if (window.confirm("Hapus kontak ini?")) del.mutate(c.id); }}><Trash2 className="h-4 w-4" /></Button>
           </div>
         ))}
       </div>
@@ -367,7 +367,7 @@ function DocumentsSection({ familyId }: { familyId?: string }) {
                       <a href={d.drive_url} target="_blank" rel="noreferrer"><ExternalLink className="h-4 w-4" /></a>
                     </Button>
                   )}
-                  <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={() => del.mutate(d.id)}><Trash2 className="h-4 w-4" /></Button>
+                  <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={() => { if (window.confirm("Hapus dokumen ini?")) del.mutate(d.id); }}><Trash2 className="h-4 w-4" /></Button>
                 </div>
               ))}
             </div>
