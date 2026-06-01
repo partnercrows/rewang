@@ -131,6 +131,8 @@
     background-color: var(--color-background);
     color: var(--color-foreground);
     -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+    touch-action: manipulation;
   }
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-heading);

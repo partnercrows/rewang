@@ -17,7 +17,7 @@ import {
   Plus, Trash2, ExternalLink, Camera, Heart, Settings as Cog, ShieldCheck, Crown,
   Sun, Moon, Globe, Lock, Eye, EyeOff, ChevronDown, ChevronUp,
 } from "lucide-react";
-import { cn, initials, normalizePhone } from "@/lib/utils";
+import { cn, initials, normalizePhone, timeAgo } from "@/lib/utils";
 import { useTheme } from "@/hooks/useTheme";
 import { useLang } from "@/hooks/useLang";
 
@@ -136,7 +136,7 @@ function FamilySection() {
     enabled: !!family?.id,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("profiles").select("id,full_name,email,avatar_url,role")
+        .from("profiles").select("id,full_name,email,avatar_url,role,last_active_at")
         .eq("family_id", family!.id).is("deleted_at", null);
       if (error) throw error;
       return data;
@@ -186,6 +186,9 @@ function FamilySection() {
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium truncate">{m.full_name}{m.id === profile?.id && " (kamu)"}</p>
               <p className="text-[11px] text-muted-foreground truncate">{m.email}</p>
+              {m.id !== profile?.id && (
+                <p className="text-[10px] text-muted-foreground/70 truncate">Terakhir online: {timeAgo(m.last_active_at)}</p>
+              )}
             </div>
             {isAdmin && m.id !== profile?.id ? (
               <Select value={m.role ?? "anggota"} onValueChange={(v) => updateRole.mutate({ id: m.id, role: v })}>

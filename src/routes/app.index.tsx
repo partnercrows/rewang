@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useLang } from "@/hooks/useLang";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useRecurringReset } from "@/hooks/useRecurringReset";
 import { formatRupiah, daysUntil, initials, cn } from "@/lib/utils";
 import {
   Package, ReceiptText, TrendingDown, Coins, Calendar, Pin, Trash2,
@@ -151,6 +152,7 @@ function TodayTasksSimple({ familyId }: { familyId: string }) {
   const { profile } = useAuth();
   const qc = useQueryClient();
   const todayStr = new Date().toISOString().slice(0, 10);
+  useRecurringReset(familyId);
 
   const { data: tasks = [], isLoading } = useQuery({
     queryKey: ["daily-tasks", familyId],
@@ -610,7 +612,7 @@ function QuickNotesCard({ familyId }: { familyId: string }) {
                       ? "bg-[oklch(0.95_0.04_85)] dark:bg-[oklch(0.28_0.04_80)] border border-warning/20 dark:border-warning/30"
                       : "bg-[oklch(0.93_0.04_120)] dark:bg-[oklch(0.25_0.04_130)] border border-accent/40 dark:border-accent/30",
                 )}
-              style={{ fontFamily: "'Caveat', 'Comic Sans MS', cursive", transform: `rotate(${(i % 2 === 0 ? -0.6 : 0.6)}deg)` }}
+              style={{ fontFamily: "'Caveat', 'Comic Sans MS', cursive" }}
             >
               <button onClick={() => togglePin.mutate(n)} className={cn("absolute top-1.5 right-7", n.is_pinned ? "text-warning" : "text-muted-foreground/60 hover:text-warning")}>
                 <Pin className={cn("h-3.5 w-3.5", n.is_pinned && "fill-current")} />

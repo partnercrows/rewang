@@ -531,18 +531,14 @@ function RecipeTab() {
         <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
           {detail && (
             <>
-              <div className="aspect-video bg-muted rounded-lg overflow-hidden -mt-2">
-                {detail.image_url ? (
+              {detail.image_url && (
+                <div className="aspect-video bg-muted rounded-lg overflow-hidden mb-4">
                   <img src={detail.image_url} alt={detail.title} className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <ImageIcon className="h-12 w-12 text-muted-foreground/30" />
-                  </div>
-                )}
-              </div>
-              <DialogHeader className="mt-2">
+                </div>
+              )}
+              <DialogHeader className="space-y-1.5">
                 {detail.category && (
-                  <span className="inline-block w-fit px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-primary/10 text-primary mb-1">
+                  <span className="inline-block w-fit px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-primary/10 text-primary">
                     {detail.category}
                   </span>
                 )}

@@ -3,6 +3,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { Loader2, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "@tanstack/react-router";
+import { supabase } from "@/integrations/supabase/client";
+import { useEffect } from "react";
 
 export const Route = createFileRoute("/app")({
   component: AppLayout,
@@ -12,6 +14,19 @@ function AppLayout() {
   const { loading, session, profile } = useAuth();
   const search = Route.useSearch() as Record<string, string>;
   const { error, error_code, error_description } = search;
+
+  // Update last_active_at every 5 minutes while user is online
+  useEffect(() => {
+    if (!session?.user) return;
+    const update = () => {
+      supabase.from("profiles").update({ last_active_at: new Date().toISOString() }).eq("id", session.user.id).then(({ error }) => {
+        if (error) console.error("Failed to update last_active_at:", error);
+      });
+    };
+    update(); // update immediately on mount
+    const interval = setInterval(update, 5 * 60 * 1000); // every 5 minutes
+    return () => clearInterval(interval);
+  }, [session?.user?.id]);
 
   // If there's an OAuth error in the URL, show it before redirecting
   if (error && !session && !loading) {

@@ -244,7 +244,7 @@ function KalenderPage() {
             {T("Tidak ada agenda di tanggal ini")}
           </p>
         ) : (
-          <div className="space-y-2 max-h-[calc(100vh-28rem)] overflow-y-auto pr-1">
+          <div className="space-y-2 max-h-[calc(100dvh-28rem)] overflow-y-auto pr-1">
             {todayEvents.map((ev: any) => {
               const d = new Date(ev.event_date);
               const diff = Math.ceil((d.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));

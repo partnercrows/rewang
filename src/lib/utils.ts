@@ -43,3 +43,23 @@ export function initials(name?: string | null) {
     .join("")
     .toUpperCase();
 }
+
+export function timeAgo(date: string | Date | null | undefined): string {
+  if (!date) return "tidak diketahui";
+  const now = new Date();
+  const then = new Date(date);
+  const diffMs = now.getTime() - then.getTime();
+  const diffSec = Math.floor(diffMs / 1000);
+  const diffMin = Math.floor(diffSec / 60);
+  const diffHour = Math.floor(diffMin / 60);
+  const diffDay = Math.floor(diffHour / 24);
+  const diffWeek = Math.floor(diffDay / 7);
+
+  if (diffSec < 60) return "baru saja";
+  if (diffMin < 60) return `${diffMin} menit lalu`;
+  if (diffHour < 24) return `${diffHour} jam lalu`;
+  if (diffDay === 1) return "kemarin";
+  if (diffDay < 7) return `${diffDay} hari lalu`;
+  if (diffWeek < 4) return `${diffWeek} minggu lalu`;
+  return `${Math.floor(diffDay / 30)} bulan lalu`;
+}

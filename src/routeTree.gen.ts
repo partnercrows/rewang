@@ -16,11 +16,13 @@ import { Route as AppRouteImport } from './routes/app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppIndexRouteImport } from './routes/app.index'
 import { Route as AppTugasRouteImport } from './routes/app.tugas'
+import { Route as AppResepRouteImport } from './routes/app.resep'
 import { Route as AppKeuanganRouteImport } from './routes/app.keuangan'
 import { Route as AppKalenderRouteImport } from './routes/app.kalender'
 import { Route as AppFeedRouteImport } from './routes/app.feed'
 import { Route as AppBelanjaRouteImport } from './routes/app.belanja'
 import { Route as AppAkunRouteImport } from './routes/app.akun'
+import { Route as AppResepResepIdRouteImport } from './routes/app.resep.$resepId'
 
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
@@ -57,6 +59,11 @@ const AppTugasRoute = AppTugasRouteImport.update({
   path: '/tugas',
   getParentRoute: () => AppRoute,
 } as any)
+const AppResepRoute = AppResepRouteImport.update({
+  id: '/resep',
+  path: '/resep',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppKeuanganRoute = AppKeuanganRouteImport.update({
   id: '/keuangan',
   path: '/keuangan',
@@ -82,6 +89,11 @@ const AppAkunRoute = AppAkunRouteImport.update({
   path: '/akun',
   getParentRoute: () => AppRoute,
 } as any)
+const AppResepResepIdRoute = AppResepResepIdRouteImport.update({
+  id: '/$resepId',
+  path: '/$resepId',
+  getParentRoute: () => AppResepRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -94,8 +106,10 @@ export interface FileRoutesByFullPath {
   '/app/feed': typeof AppFeedRoute
   '/app/kalender': typeof AppKalenderRoute
   '/app/keuangan': typeof AppKeuanganRoute
+  '/app/resep': typeof AppResepRouteWithChildren
   '/app/tugas': typeof AppTugasRoute
   '/app/': typeof AppIndexRoute
+  '/app/resep/$resepId': typeof AppResepResepIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -107,8 +121,10 @@ export interface FileRoutesByTo {
   '/app/feed': typeof AppFeedRoute
   '/app/kalender': typeof AppKalenderRoute
   '/app/keuangan': typeof AppKeuanganRoute
+  '/app/resep': typeof AppResepRouteWithChildren
   '/app/tugas': typeof AppTugasRoute
   '/app': typeof AppIndexRoute
+  '/app/resep/$resepId': typeof AppResepResepIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -122,8 +138,10 @@ export interface FileRoutesById {
   '/app/feed': typeof AppFeedRoute
   '/app/kalender': typeof AppKalenderRoute
   '/app/keuangan': typeof AppKeuanganRoute
+  '/app/resep': typeof AppResepRouteWithChildren
   '/app/tugas': typeof AppTugasRoute
   '/app/': typeof AppIndexRoute
+  '/app/resep/$resepId': typeof AppResepResepIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -138,8 +156,10 @@ export interface FileRouteTypes {
     | '/app/feed'
     | '/app/kalender'
     | '/app/keuangan'
+    | '/app/resep'
     | '/app/tugas'
     | '/app/'
+    | '/app/resep/$resepId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -151,8 +171,10 @@ export interface FileRouteTypes {
     | '/app/feed'
     | '/app/kalender'
     | '/app/keuangan'
+    | '/app/resep'
     | '/app/tugas'
     | '/app'
+    | '/app/resep/$resepId'
   id:
     | '__root__'
     | '/'
@@ -165,8 +187,10 @@ export interface FileRouteTypes {
     | '/app/feed'
     | '/app/kalender'
     | '/app/keuangan'
+    | '/app/resep'
     | '/app/tugas'
     | '/app/'
+    | '/app/resep/$resepId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -228,6 +252,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppTugasRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/resep': {
+      id: '/app/resep'
+      path: '/resep'
+      fullPath: '/app/resep'
+      preLoaderRoute: typeof AppResepRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/keuangan': {
       id: '/app/keuangan'
       path: '/keuangan'
@@ -263,8 +294,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAkunRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/resep/$resepId': {
+      id: '/app/resep/$resepId'
+      path: '/$resepId'
+      fullPath: '/app/resep/$resepId'
+      preLoaderRoute: typeof AppResepResepIdRouteImport
+      parentRoute: typeof AppResepRoute
+    }
   }
 }
+
+interface AppResepRouteChildren {
+  AppResepResepIdRoute: typeof AppResepResepIdRoute
+}
+
+const AppResepRouteChildren: AppResepRouteChildren = {
+  AppResepResepIdRoute: AppResepResepIdRoute,
+}
+
+const AppResepRouteWithChildren = AppResepRoute._addFileChildren(
+  AppResepRouteChildren,
+)
 
 interface AppRouteChildren {
   AppAkunRoute: typeof AppAkunRoute
@@ -272,6 +322,7 @@ interface AppRouteChildren {
   AppFeedRoute: typeof AppFeedRoute
   AppKalenderRoute: typeof AppKalenderRoute
   AppKeuanganRoute: typeof AppKeuanganRoute
+  AppResepRoute: typeof AppResepRouteWithChildren
   AppTugasRoute: typeof AppTugasRoute
   AppIndexRoute: typeof AppIndexRoute
 }
@@ -282,6 +333,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppFeedRoute: AppFeedRoute,
   AppKalenderRoute: AppKalenderRoute,
   AppKeuanganRoute: AppKeuanganRoute,
+  AppResepRoute: AppResepRouteWithChildren,
   AppTugasRoute: AppTugasRoute,
   AppIndexRoute: AppIndexRoute,
 }
