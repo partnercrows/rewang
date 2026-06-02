@@ -10,7 +10,7 @@ export function MainLayout({ children, title }: { children: ReactNode; title?: s
             <h1 className="text-xl font-bold tracking-tight">{title}</h1>
           </header>
         )}
-        <main className="pb-28 px-5 pt-4">{children}</main>
+        <main className="pb-36 px-5 pt-4">{children}</main>
         <BottomNavbar />
       </div>
     </div>

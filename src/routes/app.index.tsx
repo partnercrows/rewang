@@ -432,6 +432,7 @@ function UpcomingBillCard({ bill, familyId }: { bill: any; familyId: string }) {
   const { profile } = useAuth();
   const days = daysUntil(bill.due_date);
   const overdue = days < 0;
+  const dueToday = days === 0;
 
   const pay = useMutation({
     mutationFn: async () => {
@@ -471,6 +472,16 @@ function UpcomingBillCard({ bill, familyId }: { bill: any; familyId: string }) {
             <p className="text-[10px] uppercase tracking-wider opacity-90 mt-1">{overdue ? "hari telat" : days === 0 ? "hari ini" : "hari lagi"}</p>
           </div>
         </div>
+        {dueToday && (
+          <div className="mt-3 rounded-xl bg-amber-500/20 text-amber-950 dark:text-amber-100 text-[11px] font-semibold px-3 py-1.5 text-center border border-amber-400/40">
+            ⏰ Jatuh tempo hari ini — jangan lupa dibayar!
+          </div>
+        )}
+        {overdue && (
+          <div className="mt-3 rounded-xl bg-rose-500/20 text-rose-950 dark:text-rose-100 text-[11px] font-semibold px-3 py-1.5 text-center border border-rose-400/40">
+            🔴 SUDAH TERLAMBAT {days} hari — segera lunasi!
+          </div>
+        )}
         <div className="flex gap-2 mt-4">
           <Button size="sm" variant="secondary" className="flex-1" onClick={() => pay.mutate()} disabled={pay.isPending}>
             <CheckCircle2 className="h-4 w-4 mr-1" /> Lunasi
@@ -602,17 +613,16 @@ function QuickNotesCard({ familyId }: { familyId: string }) {
       ) : (
         <div className="grid grid-cols-2 gap-2">
           {notes.map((n: any, i: number) => (
-            <div
+              <div
               key={n.id}
                 className={cn(
-                  "relative p-3 rounded-xl text-sm shadow-soft",
+                   "relative p-3 rounded-xl text-sm shadow-soft font-note",
                   n.is_pinned
                     ? "bg-warning/20 dark:bg-warning/20 border border-warning/40"
                     : i % 2 === 0
                       ? "bg-[oklch(0.95_0.04_85)] dark:bg-[oklch(0.28_0.04_80)] border border-warning/20 dark:border-warning/30"
                       : "bg-[oklch(0.93_0.04_120)] dark:bg-[oklch(0.25_0.04_130)] border border-accent/40 dark:border-accent/30",
                 )}
-              style={{ fontFamily: "'Caveat', 'Comic Sans MS', cursive" }}
             >
               <button onClick={() => togglePin.mutate(n)} className={cn("absolute top-1.5 right-7", n.is_pinned ? "text-warning" : "text-muted-foreground/60 hover:text-warning")}>
                 <Pin className={cn("h-3.5 w-3.5", n.is_pinned && "fill-current")} />
@@ -621,7 +631,7 @@ function QuickNotesCard({ familyId }: { familyId: string }) {
                 <Trash2 className="h-3.5 w-3.5" />
               </button>
               <p className="leading-snug break-words pr-10 text-[15px]">{n.content}</p>
-              {n.created_by_name && <p className="text-[10px] text-muted-foreground/80 mt-1.5" style={{ fontFamily: "var(--font-body)" }}>— {n.created_by_name}</p>}
+              {n.created_by_name && <p className="text-[10px] text-muted-foreground/80 mt-1.5 font-body">— {n.created_by_name}</p>}
             </div>
           ))}
         </div>
