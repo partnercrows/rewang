@@ -126,20 +126,28 @@ function BerandaPage() {
       )}
 
       {/* Agenda */}
-      <SectionHeader title={T("Agenda bulan ini", "This month's agenda")} />
-      <AgendaSection familyId={familyId!} />
+      <div className="min-h-0">
+        <SectionHeader title={T("Agenda bulan ini", "This month's agenda")} />
+        <AgendaSection familyId={familyId!} />
+      </div>
 
       {/* Quick notes */}
-      <SectionHeader title={T("Catatan rumah", "House notes")} />
-      <QuickNotesCard familyId={familyId!} />
+      <div className="min-h-0">
+        <SectionHeader title={T("Catatan rumah", "House notes")} />
+        <QuickNotesCard familyId={familyId!} />
+      </div>
 
       {/* Today's Tasks — simplified checklist */}
-      <SectionHeader title={T("Aktivitas Hari Ini", "Today's Tasks")} />
-      <TodayTasksSimple familyId={familyId!} />
+      <div className="min-h-0">
+        <SectionHeader title={T("Aktivitas Hari Ini", "Today's Tasks")} />
+        <TodayTasksSimple familyId={familyId!} />
+      </div>
 
       {/* Resep */}
-      <SectionHeader title={T("Resep", "Recipes")} />
-      <RecipePreview familyId={familyId!} />
+      <div className="min-h-0">
+        <SectionHeader title={T("Resep", "Recipes")} />
+        <RecipePreview familyId={familyId!} />
+      </div>
 
       <QuickAddSheet />
     </MainLayout>
