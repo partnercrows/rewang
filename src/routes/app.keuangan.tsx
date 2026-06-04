@@ -6,11 +6,11 @@ import { useLang } from "@/hooks/useLang";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { formatRupiah, cn, daysUntil, normalizePhone } from "@/lib/utils";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { toast } from "sonner";
 import {
   Plus, Trash2, MessageCircle, ChevronDown, FileDown,
-  TrendingDown, Coins, Wallet, Banknote, Calendar, ReceiptText, CheckCircle2,
+  TrendingDown, Coins, Wallet, Banknote, Calendar, ReceiptText, CheckCircle2, BellRing,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,7 +19,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Switch } from "@/components/ui/switch";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { useRecurringBillReset } from "@/hooks/useRecurringReset";
 
 async function tryFeedInsert(payload: Record<string, unknown>) {
   try { await supabase.from("activity_feed").insert(payload); } catch {}
@@ -46,6 +47,8 @@ function KeuanganPage() {
   const [view, setView] = useState<"all" | "hutang" | "piutang">("all");
   const [billDialogOpen, setBillDialogOpen] = useState(false);
   const [debtDialogOpen, setDebtDialogOpen] = useState(false);
+  const [confirmDeleteBill, setConfirmDeleteBill] = useState<any>(null);
+  const [confirmDeleteDebt, setConfirmDeleteDebt] = useState<any>(null);
 
   // ---- BILLS (Tagihan) ----
   const { data: bills = [] } = useQuery({
@@ -222,6 +225,33 @@ function KeuanganPage() {
   const unpaidBills = useMemo(() => bills.filter((b: any) => !b.is_paid), [bills]);
   const paidBills = useMemo(() => bills.filter((b: any) => b.is_paid), [bills]);
 
+  // Auto-reset recurring bills
+  useRecurringBillReset(familyId);
+
+  // Track overdue bills that have already been fed to avoid spam
+  const overdueFedRef = useRef<Set<string>>(new Set());
+
+  // When bills become overdue, insert into activity_feed
+  useMemo(() => {
+    if (!familyId || bills.length === 0) return;
+    const now = new Date();
+    for (const bill of bills) {
+      if (bill.is_paid) continue;
+      const dueDate = new Date(bill.due_date);
+      if (dueDate < now && !overdueFedRef.current.has(bill.id)) {
+        overdueFedRef.current.add(bill.id);
+        tryFeedInsert({
+          family_id: familyId,
+          actor_id: profile?.id,
+          actor_name: profile?.full_name ?? "",
+          action_type: "overdue",
+          entity_type: "bill",
+          description: `Tagihan "${bill.bill_name}" melewati jatuh tempo — Segera Bayar!`,
+        });
+      }
+    }
+  }, [bills, familyId, profile?.id, profile?.full_name]);
+
   return (
     <MainLayout>
       <h1 className="text-2xl font-bold tracking-tight mb-1">{T("Keuangan", "Finance")}</h1>
@@ -296,6 +326,7 @@ function KeuanganPage() {
                       bill={b}
                       onDelete={(id) => deleteBill.mutate(id)}
                       onPay={(bill) => payBill.mutate(bill)}
+                      onDeletePrompt={setConfirmDeleteBill}
                     />
                   ))}
                 </>
@@ -313,6 +344,7 @@ function KeuanganPage() {
                       bill={b}
                       onDelete={(id) => deleteBill.mutate(id)}
                       onPay={() => {}}
+                      onDeletePrompt={setConfirmDeleteBill}
                     />
                   ))}
                 </>
@@ -357,6 +389,7 @@ function KeuanganPage() {
                 onPay={(amount, method, payDate) =>
                   payDebt.mutate({ debt: d, amount, method, payDate })
                 }
+                onDeletePrompt={setConfirmDeleteDebt}
               />
             ))}
           </div>
@@ -377,6 +410,46 @@ function KeuanganPage() {
           </Dialog>
         </>
       )}
+
+      {/* Confirm Delete Bill */}
+      <ConfirmDialog
+        open={!!confirmDeleteBill}
+        onOpenChange={(open) => { if (!open) setConfirmDeleteBill(null); }}
+        title={T("Hapus Tagihan", "Delete Bill")}
+        description={
+          confirmDeleteBill
+            ? T(`Yakin ingin menghapus tagihan "${confirmDeleteBill.bill_name}"?`, `Are you sure you want to delete bill "${confirmDeleteBill.bill_name}"?`)
+            : ""
+        }
+        confirmLabel={T("Hapus", "Delete")}
+        variant="destructive"
+        onConfirm={() => {
+          if (confirmDeleteBill) {
+            deleteBill.mutate(confirmDeleteBill.id);
+            setConfirmDeleteBill(null);
+          }
+        }}
+      />
+
+      {/* Confirm Delete Debt */}
+      <ConfirmDialog
+        open={!!confirmDeleteDebt}
+        onOpenChange={(open) => { if (!open) setConfirmDeleteDebt(null); }}
+        title={T("Hapus Catatan", "Delete Record")}
+        description={
+          confirmDeleteDebt
+            ? T(`Yakin ingin menghapus catatan ${confirmDeleteDebt.type === "hutang" ? "hutang" : "piutang"} dari "${confirmDeleteDebt.person_name}"?`, `Are you sure you want to delete this ${confirmDeleteDebt.type === "hutang" ? "debt" : "credit"} record from "${confirmDeleteDebt.person_name}"?`)
+            : ""
+        }
+        confirmLabel={T("Hapus", "Delete")}
+        variant="destructive"
+        onConfirm={() => {
+          if (confirmDeleteDebt) {
+            delDebt.mutate(confirmDeleteDebt.id);
+            setConfirmDeleteDebt(null);
+          }
+        }}
+      />
     </MainLayout>
   );
 }
@@ -386,10 +459,12 @@ function BillCard({
   bill,
   onDelete,
   onPay,
+  onDeletePrompt,
 }: {
   bill: any;
   onDelete: (id: string) => void;
   onPay: (bill: any) => void;
+  onDeletePrompt: (bill: any) => void;
 }) {
   const { T } = useLang();
   const days = daysUntil(bill.due_date);
@@ -419,7 +494,14 @@ function BillCard({
               {bill.bill_name}
             </h3>
             {bill.is_recurring && (
-              <span className="text-[10px] text-blue-600 dark:text-blue-400 font-medium">Berulang</span>
+              <span className="text-[10px] text-blue-600 dark:text-blue-400 font-medium">
+                {bill.recurrence_interval === "yearly" ? "Tiap Tahun" : "Tiap Bulan"}
+              </span>
+            )}
+            {bill.reminder_days && !bill.is_paid && days >= 1 && days <= bill.reminder_days && (
+              <span className="inline-flex items-center gap-0.5 text-[10px] text-amber-600 dark:text-amber-400 font-medium">
+                <BellRing className="h-3 w-3" /> H-{days}
+              </span>
             )}
           </div>
           <p className="text-lg font-bold mt-0.5">{formatRupiah(bill.nominal)}</p>
@@ -432,7 +514,7 @@ function BillCard({
         </div>
 
         <div className="flex flex-col items-end gap-1.5 shrink-0 ml-3">
-          <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={() => { if (window.confirm("Hapus tagihan ini?")) onDelete(bill.id); }}>
+          <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={() => onDeletePrompt(bill)}>
             <Trash2 className="h-3.5 w-3.5" />
           </Button>
 
@@ -475,15 +557,26 @@ function AddBillForm({ onSubmit, busy }: { onSubmit: (v: any) => void; busy: boo
   const [bill_name, setName] = useState("");
   const [nominal, setNominal] = useState("");
   const [due_date, setDueDate] = useState(new Date().toISOString().slice(0, 10));
-  const [is_recurring, setIsRecurring] = useState(false);
+  const [recurrence_interval, setRecurrence] = useState<string>("none");
   const [bill_type, setBillType] = useState("tagihan");
   const [notes, setNotes] = useState("");
+  const [reminder_days, setReminderDays] = useState<string>("none");
 
   return (
     <form
       onSubmit={(e) => {
         e.preventDefault();
-        onSubmit({ bill_name, nominal: Number(nominal) || 0, due_date, is_recurring, bill_type, notes: notes.trim() || null, is_paid: false });
+        onSubmit({
+          bill_name,
+          nominal: Number(nominal) || 0,
+          due_date,
+          is_recurring: recurrence_interval !== "none",
+          recurrence_interval: recurrence_interval === "none" ? null : recurrence_interval,
+          bill_type,
+          notes: notes.trim() || null,
+          is_paid: false,
+          reminder_days: reminder_days === "none" ? null : Number(reminder_days),
+        });
       }}
       className="space-y-3"
     >
@@ -516,12 +609,29 @@ function AddBillForm({ onSubmit, busy }: { onSubmit: (v: any) => void; busy: boo
           </SelectContent>
         </Select>
       </div>
-      <div className="flex items-center justify-between py-2">
-        <div>
-          <Label className="text-sm">{T("Tagihan Berulang", "Recurring Bill")}</Label>
-          <p className="text-[11px] text-muted-foreground">{T("Terjadi tiap bulan", "Every month")}</p>
-        </div>
-        <Switch checked={is_recurring} onCheckedChange={setIsRecurring} />
+      <div>
+        <Label>{T("Tagihan Berulang", "Recurring Bill")}</Label>
+        <Select value={recurrence_interval} onValueChange={setRecurrence}>
+          <SelectTrigger><SelectValue placeholder={T("Tidak berulang", "Not recurring")} /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="none">{T("Tidak Berulang", "Not Recurring")}</SelectItem>
+            <SelectItem value="monthly">{T("Tiap Bulan", "Every Month")}</SelectItem>
+            <SelectItem value="yearly">{T("Tiap Tahun", "Every Year")}</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      <div>
+        <Label>{T("Pengingat Jatuh Tempo", "Due Date Reminder")}</Label>
+        <Select value={reminder_days} onValueChange={setReminderDays}>
+          <SelectTrigger><SelectValue placeholder={T("Tidak ada pengingat", "No reminder")} /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="none">{T("Tidak Ada", "None")}</SelectItem>
+            <SelectItem value="1">H-1 ({T("1 hari sebelum", "1 day before")})</SelectItem>
+            <SelectItem value="3">H-3 ({T("3 hari sebelum", "3 days before")})</SelectItem>
+            <SelectItem value="7">H-7 ({T("7 hari sebelum", "7 days before")})</SelectItem>
+            <SelectItem value="30">H-30 ({T("30 hari sebelum", "30 days before")})</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
       <div>
         <Label>{T("Catatan", "Notes")}</Label>
@@ -539,10 +649,12 @@ function DebtCard({
   d,
   onDelete,
   onPay,
+  onDeletePrompt,
 }: {
   d: any;
   onDelete: (id: string) => void;
   onPay: (amount: number, method: string, payDate: string) => void;
+  onDeletePrompt: (debt: any) => void;
 }) {
   const { T } = useLang();
   const paid = (d.installment_logs ?? []).reduce((s: number, l: any) => s + Number(l.amount_paid), 0);
@@ -693,7 +805,7 @@ function DebtCard({
           <Button size="icon" variant="ghost" className="h-8 w-8" onClick={exportPDF} title="Unduh PDF">
             <FileDown className="h-4 w-4 text-muted-foreground hover:text-primary" />
           </Button>
-          <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={() => { if (window.confirm("Hapus catatan ini?")) onDelete(d.id); }}>
+          <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={() => onDeletePrompt(d)}>
             <Trash2 className="h-4 w-4" />
           </Button>
         </div>

@@ -17,6 +17,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 
 export const Route = createFileRoute("/app/tugas")({
   head: () => ({ meta: [{ title: "Tugas — Rewang" }] }),
@@ -34,6 +35,7 @@ function TugasPage() {
   const { lang, T } = useLang();
   const familyId = family?.id;
   const qc = useQueryClient();
+  const [confirmDeleteTask, setConfirmDeleteTask] = useState<any>(null);
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState<"all" | "active" | "done">("all");
   const todayStr = new Date().toISOString().slice(0, 10);
@@ -284,7 +286,7 @@ function TugasPage() {
 
                 {/* Delete button */}
                 <button
-                  onClick={() => { if (window.confirm("Hapus tugas ini?")) del.mutate(t.id); }}
+                  onClick={() => setConfirmDeleteTask(t)}
                   disabled={del.isPending}
                   className="text-muted-foreground/40 hover:text-destructive shrink-0 mt-0.5 transition-colors"
                 >
@@ -295,6 +297,14 @@ function TugasPage() {
           })}
         </div>
       )}
+      <ConfirmDialog
+        open={!!confirmDeleteTask}
+        onOpenChange={(v) => { if (!v) setConfirmDeleteTask(null); }}
+        title="Hapus tugas ini?"
+        confirmLabel="Hapus"
+        onConfirm={() => { if (confirmDeleteTask) del.mutate(confirmDeleteTask.id); setConfirmDeleteTask(null); }}
+        isLoading={del.isPending}
+      />
     </MainLayout>
   );
 }

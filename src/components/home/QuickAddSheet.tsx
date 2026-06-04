@@ -20,7 +20,7 @@ export function QuickAddSheet() {
   return (
     <Sheet open={open} onOpenChange={(v) => { setOpen(v); if (!v) setMode("menu"); }}>
       <SheetTrigger asChild>
-        <Button className="fixed bottom-28 right-5 z-30 shadow-card rounded-full h-14 w-14 p-0" size="lg" aria-label="Tambah cepat">
+        <Button className="fixed bottom-28 right-5 z-[60] shadow-card rounded-full h-14 w-14 p-0" size="lg" aria-label="Tambah cepat">
           <Plus className="h-6 w-6" />
         </Button>
       </SheetTrigger>

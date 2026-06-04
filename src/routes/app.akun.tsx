@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useState, useRef } from "react";
 import { toast } from "sonner";
@@ -218,6 +219,7 @@ const CONTACT_CATEGORIES = ["polisi", "pemadam", "rumah_sakit", "wifi", "saudara
 function EmergencyContactsSection({ familyId }: { familyId?: string }) {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
+  const [confirmDeleteContact, setConfirmDeleteContact] = useState<any>(null);
 
   const { data: contacts = [] } = useQuery({
     queryKey: ["emergency_contacts", familyId],
@@ -270,10 +272,17 @@ function EmergencyContactsSection({ familyId }: { familyId?: string }) {
             </div>
             <Button asChild size="icon" variant="outline" className="h-8 w-8"><a href={`tel:${c.phone}`}><Phone className="h-4 w-4" /></a></Button>
 <Button asChild size="icon" variant="outline" className="h-8 w-8"><a href={`https://wa.me/${normalizePhone(c.phone)}`} target="_blank" rel="noreferrer"><MessageCircle className="h-4 w-4" /></a></Button>
-            <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={() => { if (window.confirm("Hapus kontak ini?")) del.mutate(c.id); }}><Trash2 className="h-4 w-4" /></Button>
+            <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={() => setConfirmDeleteContact(c)}><Trash2 className="h-4 w-4" /></Button>
           </div>
         ))}
       </div>
+      <ConfirmDialog
+        open={!!confirmDeleteContact}
+        onOpenChange={(v) => { if (!v) setConfirmDeleteContact(null); }}
+        title="Hapus kontak ini?"
+        confirmLabel="Hapus"
+        onConfirm={() => { if (confirmDeleteContact) del.mutate(confirmDeleteContact.id); setConfirmDeleteContact(null); }}
+      />
     </section>
   );
 }
@@ -307,6 +316,7 @@ const DOC_CATEGORIES = ["KK", "BPJS", "STNK", "tagihan", "sertifikat", "lainnya"
 function DocumentsSection({ familyId }: { familyId?: string }) {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
+  const [confirmDeleteDoc, setConfirmDeleteDoc] = useState<any>(null);
 
   const { data: docs = [] } = useQuery({
     queryKey: ["documents", familyId],
@@ -370,13 +380,20 @@ function DocumentsSection({ familyId }: { familyId?: string }) {
                       <a href={d.drive_url} target="_blank" rel="noreferrer"><ExternalLink className="h-4 w-4" /></a>
                     </Button>
                   )}
-                  <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={() => { if (window.confirm("Hapus dokumen ini?")) del.mutate(d.id); }}><Trash2 className="h-4 w-4" /></Button>
+                  <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={() => setConfirmDeleteDoc(d)}><Trash2 className="h-4 w-4" /></Button>
                 </div>
               ))}
             </div>
           </div>
         ))}
       </div>
+      <ConfirmDialog
+        open={!!confirmDeleteDoc}
+        onOpenChange={(v) => { if (!v) setConfirmDeleteDoc(null); }}
+        title="Hapus dokumen ini?"
+        confirmLabel="Hapus"
+        onConfirm={() => { if (confirmDeleteDoc) del.mutate(confirmDeleteDoc.id); setConfirmDeleteDoc(null); }}
+      />
     </section>
   );
 }

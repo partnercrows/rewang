@@ -59,7 +59,7 @@ function getCategory(entityType: string | null, actionType: string | null): Cate
   const a = (actionType ?? "").toLowerCase();
   if (t === "bill" || t === "debt" || t === "credit" || a === "pay" || a === "debt" || a === "credit") return "finance";
   if (t === "agenda" || t === "event" || a === "agenda" || a === "event") return "agenda";
-  if (t === "stock" || t === "shopping_item" || a === "stock" || a === "shopping") return "stock";
+  if (t === "stock" || t === "shopping_item" || t === "shopping" || a === "stock" || a === "shopping") return "stock";
   if (t === "task" || t === "chore" || t === "daily_task" || a === "task" || a === "chore" || a === "complete_task") return "tasks";
   return "other";
 }

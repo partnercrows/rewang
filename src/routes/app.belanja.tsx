@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Trash2, Minus, Search, Edit2, ShoppingCart, Star, Package, UtensilsCrossed, Image as ImageIcon } from "lucide-react";
 import { useState, useMemo, useRef, useEffect, useCallback } from "react";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { toast } from "sonner";
 import { cn, formatRupiah } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
@@ -70,6 +71,7 @@ function StockTab() {
   const [statusFilter, setStatusFilter] = useState<string>(T("Semua"));
   const [search, setSearch] = useState("");
   const [catMgrOpen, setCatMgrOpen] = useState(false);
+  const [confirmDeleteItem, setConfirmDeleteItem] = useState<any>(null);
 
   const STATUSES = [T("Aman"), T("Menipis"), T("Habis")];
 
@@ -214,10 +216,10 @@ function StockTab() {
                   <div className="mt-1.5">
                     <div className="flex justify-between text-[10px] text-muted-foreground mb-0.5">
                       <span>{qty}/{item.min_stock} {item.unit}</span>
-                      <span>{Math.min(100, Math.round((qty / (item.min_stock || 1)) * 100))}%</span>
+                      <span>{Math.min(100, Math.round((qty / Math.max(item.min_stock, qty, 1)) * 100))}%</span>
                     </div>
-                    <div className="h-2.5 rounded-full bg-muted overflow-hidden">
-                      <div className={cn("h-full rounded-full transition-all", (() => { const pct = Math.min(100, Math.round((qty / (item.min_stock || 1)) * 100)); if (pct >= 70) return "bg-success"; else if (pct >= 30) return "bg-warning"; else return "bg-destructive"; })())} style={{ width: `${Math.min(100, Math.round((qty / (item.min_stock || 1)) * 100))}%` }} />
+<div className="h-2.5 rounded-full bg-muted overflow-hidden">
+                      <div className={cn("h-full rounded-full transition-all", (() => { if (qty <= 0) return "bg-destructive"; else if (qty <= item.min_stock) return "bg-warning"; else return "bg-success"; })())} style={{ width: `${Math.min(100, Math.round((qty / Math.max(item.min_stock, qty, 1)) * 100))}%` }} />
                     </div>
                   </div>
                   {item.last_updated_by_name && (
@@ -233,7 +235,7 @@ function StockTab() {
               <div className="flex gap-1 mt-2 pt-2 border-t border-border">
                 <Button size="sm" variant="ghost" className="h-7 text-xs flex-1" onClick={() => updateQty.mutate({ id: item.id, mark: "empty" })}>{T("Habiskan")}</Button>
                 <Button size="sm" variant="ghost" className="h-7 text-xs flex-1" onClick={() => setEdit(item)}><Edit2 className="h-3 w-3 mr-1" />{T("Edit")}</Button>
-                <Button size="sm" variant="ghost" className="h-7 text-xs text-destructive" onClick={() => { if (window.confirm(T("Hapus item ini?"))) removeItem.mutate(item.id); }}><Trash2 className="h-3 w-3" /></Button>
+                <Button size="sm" variant="ghost" className="h-7 text-xs text-destructive" onClick={() => setConfirmDeleteItem(item)}><Trash2 className="h-3 w-3" /></Button>
               </div>
             </div>
           );
@@ -253,6 +255,13 @@ function StockTab() {
       </Dialog>
 
       <CategoryManager open={catMgrOpen} onOpenChange={setCatMgrOpen} familyId={familyId!} categories={cats} type="shopping" />
+
+      <ConfirmDialog
+        open={!!confirmDeleteItem}
+        onOpenChange={() => setConfirmDeleteItem(null)}
+        title={T("Hapus item ini?")}
+        onConfirm={() => removeItem.mutate(confirmDeleteItem.id)}
+      />
     </>
   );
 }
@@ -314,6 +323,7 @@ function RecipeTab() {
   const [search, setSearch] = useState("");
   const [filterCat, setFilterCat] = useState<string>(T("Semua"));
   const [catMgrOpen, setCatMgrOpen] = useState(false);
+  const [confirmDeleteRecipe, setConfirmDeleteRecipe] = useState<any>(null);
   const observerRef = useRef<IntersectionObserver | null>(null);
 
   const { data: cats = [] } = useQuery({
@@ -560,7 +570,7 @@ function RecipeTab() {
                 <Button variant="outline" className="flex-1" onClick={() => { setEdit(detail); setDetail(null); }}>
                   <Edit2 className="h-4 w-4 mr-1" /> {T("Edit")}
                 </Button>
-                <Button variant="destructive" className="flex-1" onClick={() => { if (window.confirm(T("Hapus resep ini?"))) deleteRecipe.mutate(detail.id); }}>
+                <Button variant="destructive" className="flex-1" onClick={() => setConfirmDeleteRecipe(detail)}>
                   <Trash2 className="h-4 w-4 mr-1" /> {T("Hapus")}
                 </Button>
               </DialogFooter>
@@ -570,6 +580,13 @@ function RecipeTab() {
       </Dialog>
 
       <CategoryManager open={catMgrOpen} onOpenChange={setCatMgrOpen} familyId={familyId!} categories={cats} type="recipe" />
+
+      <ConfirmDialog
+        open={!!confirmDeleteRecipe}
+        onOpenChange={() => setConfirmDeleteRecipe(null)}
+        title={T("Hapus resep ini?")}
+        onConfirm={() => deleteRecipe.mutate(confirmDeleteRecipe.id)}
+      />
     </>
   );
 }
@@ -618,6 +635,7 @@ function WishlistTab() {
   const { profile } = useAuth();
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
+  const [confirmDeleteWishlist, setConfirmDeleteWishlist] = useState<any>(null);
 
   const { data: items = [] } = useQuery({
     queryKey: ["wishlist", familyId],
@@ -665,7 +683,7 @@ function WishlistTab() {
                 <p className="text-xs text-primary font-medium mt-0.5">{formatRupiah(w.estimated_price ?? 0)}</p>
                 {w.notes && <p className="text-[11px] text-muted-foreground mt-1">{w.notes}</p>}
               </div>
-              <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={() => { if (window.confirm(T("Hapus item ini?"))) del.mutate(w.id); }}><Trash2 className="h-4 w-4" /></Button>
+              <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={() => setConfirmDeleteWishlist(w)}><Trash2 className="h-4 w-4" /></Button>
             </div>
             <Button size="sm" variant="outline" className="w-full mt-2" onClick={() => buy.mutate(w)}>
               <ShoppingCart className="h-3.5 w-3.5 mr-1" /> {T("Sudah dibeli → pindah ke stok")}
@@ -683,6 +701,13 @@ function WishlistTab() {
           <WishlistForm onSubmit={(v) => add.mutate(v)} busy={add.isPending} />
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={!!confirmDeleteWishlist}
+        onOpenChange={() => setConfirmDeleteWishlist(null)}
+        title={T("Hapus item ini?")}
+        onConfirm={() => del.mutate(confirmDeleteWishlist.id)}
+      />
     </>
   );
 }
@@ -722,6 +747,7 @@ function CategoryManager({ open, onOpenChange, familyId, categories, type }: { o
   const { T } = useLang();
   const qc = useQueryClient();
   const [name, setName] = useState("");
+  const [confirmDeleteCategory, setConfirmDeleteCategory] = useState<any>(null);
   const tableName = type === "recipe" ? "recipe_categories" : "shopping_categories";
   const queryKey = type === "recipe" ? ["recipe-cats", familyId] : ["shopping-cats", familyId];
 
@@ -758,12 +784,19 @@ function CategoryManager({ open, onOpenChange, familyId, categories, type }: { o
             {categories.map((c: any) => (
               <div key={c.id} className="flex items-center justify-between px-3 py-2 bg-card border border-border rounded-lg">
                 <span className="text-sm">{c.name}</span>
-                <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => { if (window.confirm(T("Hapus kategori ini?"))) del.mutate(c.id); }}><Trash2 className="h-3.5 w-3.5" /></Button>
+                <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => setConfirmDeleteCategory(c)}><Trash2 className="h-3.5 w-3.5" /></Button>
               </div>
             ))}
           </div>
         </div>
       </DialogContent>
+
+      <ConfirmDialog
+        open={!!confirmDeleteCategory}
+        onOpenChange={() => setConfirmDeleteCategory(null)}
+        title={T("Hapus kategori ini?")}
+        onConfirm={() => del.mutate(confirmDeleteCategory.id)}
+      />
     </Dialog>
   );
 }

@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Label } from "@/components/ui/label";
@@ -79,7 +80,7 @@ function BerandaPage() {
     queryFn: async () => {
       const { data } = await supabase
         .from("bills")
-        .select("id,bill_name,nominal,due_date,is_recurring,bill_type")
+        .select("id,bill_name,nominal,due_date,is_recurring,bill_type,recurrence_interval,reminder_days")
         .eq("family_id", familyId!)
         .is("deleted_at", null)
         .eq("is_paid", false)
@@ -215,6 +216,8 @@ function TodayTasksSimple({ familyId }: { familyId: string }) {
     },
   });
 
+  const [confirmDeleteTask, setConfirmDeleteTask] = useState<any>(null);
+
   const deleteTask = useMutation({
     mutationFn: async (id: string) => {
       await (supabase as any).from("daily_tasks").update({ deleted_at: new Date().toISOString() }).eq("id", id);
@@ -304,7 +307,7 @@ function TodayTasksSimple({ familyId }: { familyId: string }) {
 
               {/* Delete button */}
               <button
-                onClick={() => { if (window.confirm("Hapus tugas ini?")) deleteTask.mutate(t.id); }}
+                onClick={() => setConfirmDeleteTask(t)}
                 disabled={deleteTask.isPending}
                 className="text-muted-foreground/50 hover:text-destructive shrink-0 p-1"
               >
@@ -317,6 +320,15 @@ function TodayTasksSimple({ familyId }: { familyId: string }) {
 
       {/* Add task dialog — controlled so it closes on success */}
       <AddTaskSimpleDialog familyId={familyId} profile={profile} onSuccess={() => qc.invalidateQueries({ queryKey: ["daily-tasks", familyId] })} />
+
+      <ConfirmDialog
+        open={!!confirmDeleteTask}
+        onOpenChange={(v) => { if (!v) setConfirmDeleteTask(null); }}
+        title="Hapus tugas ini?"
+        confirmLabel="Hapus"
+        onConfirm={() => { if (confirmDeleteTask) deleteTask.mutate(confirmDeleteTask.id); setConfirmDeleteTask(null); }}
+        isLoading={deleteTask.isPending}
+      />
     </>
   );
 }
@@ -450,6 +462,9 @@ function UpcomingBillCard({ bill, familyId }: { bill: any; familyId: string }) {
     },
   });
 
+  // Show reminder badge
+  const reminderActive = bill.reminder_days && !bill.is_paid && days >= 1 && days <= bill.reminder_days;
+
   return (
     <div className={cn(
       "relative overflow-hidden rounded-3xl p-5 mb-6 shadow-card text-primary-foreground",
@@ -496,7 +511,7 @@ function UpcomingBillCard({ bill, familyId }: { bill: any; familyId: string }) {
 }
 
 const AGENDA_ICON: Record<string, any> = { ulang_tahun: Cake, kajian: BookOpen, sekolah: GraduationCap, janji: Calendar, pengingat: BellRing };
-const AGENDA_EMOJI: Record<string, string> = { ulang_tahun: "🎂", kajian: "🕌", sekolah: "🎓", janji: "📌", pengingat: "⚡" };
+const AGENDA_EMOJI: Record<string, string> = { ulang_tahun: "🎂", kajian: "🕌", sekolah: "🎓", janji: "📌", pengingat: "🔔" };
 
 function AgendaSection({ familyId }: { familyId: string }) {
   const { data: agenda = [] } = useQuery({
@@ -559,6 +574,7 @@ function QuickNotesCard({ familyId }: { familyId: string }) {
   const qc = useQueryClient();
   const { profile } = useAuth();
   const [text, setText] = useState("");
+  const [confirmDeleteNote, setConfirmDeleteNote] = useState<any>(null);
 
   const { data: notes = [] } = useQuery({
     queryKey: ["notes", familyId],
@@ -627,7 +643,7 @@ function QuickNotesCard({ familyId }: { familyId: string }) {
               <button onClick={() => togglePin.mutate(n)} className={cn("absolute top-1.5 right-7", n.is_pinned ? "text-warning" : "text-muted-foreground/60 hover:text-warning")}>
                 <Pin className={cn("h-3.5 w-3.5", n.is_pinned && "fill-current")} />
               </button>
-              <button onClick={() => { if (window.confirm("Hapus catatan ini?")) del.mutate(n.id); }} className="absolute top-1.5 right-1.5 text-muted-foreground/60 hover:text-destructive">
+              <button onClick={() => setConfirmDeleteNote(n)} className="absolute top-1.5 right-1.5 text-muted-foreground/60 hover:text-destructive">
                 <Trash2 className="h-3.5 w-3.5" />
               </button>
               <p className="leading-snug break-words pr-10 text-[15px]">{n.content}</p>
@@ -636,6 +652,13 @@ function QuickNotesCard({ familyId }: { familyId: string }) {
           ))}
         </div>
       )}
+      <ConfirmDialog
+        open={!!confirmDeleteNote}
+        onOpenChange={(v) => { if (!v) setConfirmDeleteNote(null); }}
+        title="Hapus catatan ini?"
+        confirmLabel="Hapus"
+        onConfirm={() => { if (confirmDeleteNote) del.mutate(confirmDeleteNote.id); setConfirmDeleteNote(null); }}
+      />
     </div>
   );
 }
