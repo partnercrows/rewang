@@ -126,25 +126,25 @@ function BerandaPage() {
       )}
 
       {/* Agenda */}
-      <div className="min-h-0">
+      <div className="mb-5">
         <SectionHeader title={T("Agenda bulan ini", "This month's agenda")} />
         <AgendaSection familyId={familyId!} />
       </div>
 
       {/* Quick notes */}
-      <div className="min-h-0">
+      <div className="mb-5 overflow-hidden">
         <SectionHeader title={T("Catatan rumah", "House notes")} />
         <QuickNotesCard familyId={familyId!} />
       </div>
 
       {/* Today's Tasks — simplified checklist */}
-      <div className="min-h-0">
+      <div className="mb-5">
         <SectionHeader title={T("Aktivitas Hari Ini", "Today's Tasks")} />
         <TodayTasksSimple familyId={familyId!} />
       </div>
 
       {/* Resep */}
-      <div className="min-h-0">
+      <div className="mb-5">
         <SectionHeader title={T("Resep", "Recipes")} />
         <RecipePreview familyId={familyId!} />
       </div>
@@ -635,12 +635,12 @@ function QuickNotesCard({ familyId }: { familyId: string }) {
       {notes.length === 0 ? (
         <p className="text-xs text-muted-foreground text-center py-4 bg-card border border-dashed border-border rounded-2xl">Belum ada catatan</p>
       ) : (
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-2 gap-2 [contain:layout_style]">
           {notes.map((n: any, i: number) => (
               <div
               key={n.id}
                 className={cn(
-                   "relative p-3 rounded-xl text-sm shadow-soft font-note",
+                  "relative p-3 rounded-xl text-sm shadow-soft font-note min-h-[5rem] break-inside-avoid",
                   n.is_pinned
                     ? "bg-warning/20 dark:bg-warning/20 border border-warning/40"
                     : i % 2 === 0
