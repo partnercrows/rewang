@@ -161,6 +161,8 @@ export type Database = {
           id: string
           is_paid: boolean
           is_recurring: boolean
+          last_updated_by: string | null
+          last_updated_by_name: string | null
           nominal: number
           notes: string | null
           paid_at: string | null
@@ -179,6 +181,8 @@ export type Database = {
           id?: string
           is_paid?: boolean
           is_recurring?: boolean
+          last_updated_by?: string | null
+          last_updated_by_name?: string | null
           nominal: number
           notes?: string | null
           paid_at?: string | null
@@ -197,6 +201,8 @@ export type Database = {
           id?: string
           is_paid?: boolean
           is_recurring?: boolean
+          last_updated_by?: string | null
+          last_updated_by_name?: string | null
           nominal?: number
           notes?: string | null
           paid_at?: string | null
@@ -298,6 +304,8 @@ export type Database = {
           deleted_at: string | null
           family_id: string
           id: string
+          last_updated_by: string | null
+          last_updated_by_name: string | null
           monthly_installment: number
           person_name: string
           phone_number: string | null
@@ -313,6 +321,8 @@ export type Database = {
           deleted_at?: string | null
           family_id: string
           id?: string
+          last_updated_by?: string | null
+          last_updated_by_name?: string | null
           monthly_installment?: number
           person_name: string
           phone_number?: string | null
@@ -328,6 +338,8 @@ export type Database = {
           deleted_at?: string | null
           family_id?: string
           id?: string
+          last_updated_by?: string | null
+          last_updated_by_name?: string | null
           monthly_installment?: number
           person_name?: string
           phone_number?: string | null
@@ -803,6 +815,8 @@ export type Database = {
           family_id: string
           id: string
           item_name: string
+          last_updated_by: string | null
+          last_updated_by_name: string | null
           notes: string | null
           priority: string
           purchased_at: string | null
@@ -815,6 +829,8 @@ export type Database = {
           family_id: string
           id?: string
           item_name: string
+          last_updated_by?: string | null
+          last_updated_by_name?: string | null
           notes?: string | null
           priority?: string
           purchased_at?: string | null
@@ -827,6 +843,8 @@ export type Database = {
           family_id?: string
           id?: string
           item_name?: string
+          last_updated_by?: string | null
+          last_updated_by_name?: string | null
           notes?: string | null
           priority?: string
           purchased_at?: string | null

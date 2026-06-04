@@ -113,7 +113,7 @@ function BerandaPage() {
         <SummaryTile to="/app/belanja" Icon={Package} label={T("Stok menipis", "Low stock")} value={`${stats?.lowStock ?? 0} ${T("item", "item")}`} bg="bg-warning/15" fg="text-warning-foreground" iconBg="bg-warning/25" />
         <SummaryTile to="/app/keuangan" Icon={ReceiptText} label={T("Belum bayar", "Unpaid")} value={`${stats?.unpaidCount ?? 0} ${T("tagihan", "bills")}`} bg="bg-primary/10" fg="text-primary" iconBg="bg-primary/20" />
         <SummaryTile to="/app/keuangan?tab=hutang-piutang" Icon={TrendingDown} label={T("Hutang aktif", "Active debt")} value={formatRupiah(stats?.hutang ?? 0)} bg="bg-destructive/10" fg="text-destructive" iconBg="bg-destructive/15" />
-        <SummaryTile to="/app/keuangan?tab=hutang-piutang" Icon={Coins} label={T("Piutang", "Receivable")} value={formatRupiah(stats?.piutang ?? 0)} bg="bg-success/15" fg="text-success-foreground" iconBg="bg-success/25" />
+        <SummaryTile to="/app/keuangan?tab=hutang-piutang" Icon={Coins} label={T("Piutang", "Receivable")} value={formatRupiah(stats?.piutang ?? 0)} bg="bg-success/15" fg="text-emerald-700 dark:text-emerald-400" iconBg="bg-success/25" />
       </div>
 
       {/* Upcoming bill */}

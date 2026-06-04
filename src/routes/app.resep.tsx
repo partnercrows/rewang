@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Search, ChevronLeft } from "lucide-react";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
@@ -37,10 +37,22 @@ function ResepListPage() {
   const qc = useQueryClient();
   const navigate = useNavigate();
 
+  const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [filterCat, setFilterCat] = useState<string>(T("Semua"));
   const [open, setOpen] = useState(false);
   const [editData, setEditData] = useState<any>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      setSearch(searchInput);
+    }, 300);
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [searchInput]);
 
   const [formTitle, setFormTitle] = useState("");
   const [formDescription, setFormDescription] = useState("");
@@ -53,6 +65,8 @@ function ResepListPage() {
     hasNextPage,
     isFetchingNextPage,
     isLoading,
+    isError,
+    error,
   } = useInfiniteQuery({
     queryKey: ["recipes", familyId, filterCat, search],
     enabled: !!familyId,
@@ -69,7 +83,8 @@ function ResepListPage() {
         query = query.eq("category", filterCat);
       }
       if (search) {
-        query = query.ilike("title", `%${search}%`);
+        const escaped = search.replace(/[%_]/g, "\\$&");
+        query = query.ilike("title", `%${escaped}%`);
       }
 
       const { data, error, count } = await query;
@@ -93,13 +108,16 @@ function ResepListPage() {
         description: formDescription.trim() || null,
         image_url: formImageUrl.trim() || null,
         category: formCategory,
-        created_by: profile?.id,
-        created_by_name: profile?.full_name,
+        last_updated_by: profile?.id,
+        last_updated_by_name: profile?.full_name,
       };
       if (editData?.id) {
+        payload.updated_at = new Date().toISOString();
         const { error } = await supabase.from("recipes").update(payload).eq("id", editData.id);
         if (error) throw error;
       } else {
+        payload.created_by = profile?.id;
+        payload.created_by_name = profile?.full_name;
         const { error } = await supabase.from("recipes").insert(payload);
         if (error) throw error;
       }
@@ -159,7 +177,7 @@ function ResepListPage() {
           </Button>
           <div className="relative flex-1">
             <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input className="pl-9" placeholder={T("Cari resep...")} value={search} onChange={(e) => setSearch(e.target.value)} />
+            <Input className="pl-9" placeholder={T("Cari resep...")} value={searchInput} onChange={(e) => setSearchInput(e.target.value)} />
           </div>
           <Button size="icon" onClick={openAdd} className="shrink-0">
             <Plus className="h-4 w-4" />
@@ -187,11 +205,18 @@ function ResepListPage() {
         <div className="text-center py-12 text-muted-foreground text-sm">{T("Memuat...")}</div>
       )}
 
-      {!isLoading && allItems.length === 0 && (
+      {isError && (
+        <div className="text-center py-12 text-destructive text-sm">
+          {T("Gagal memuat resep")}
+          {error instanceof Error && <span className="block text-xs mt-1 opacity-70">{error.message}</span>}
+        </div>
+      )}
+
+      {!isLoading && !isError && allItems.length === 0 && (
         <div className="text-center py-12 text-muted-foreground text-sm">{T("Belum ada resep")}</div>
       )}
 
-      {!isLoading && allItems.length > 0 && (
+      {!isLoading && !isError && allItems.length > 0 && (
         <div className="grid grid-cols-2 gap-3 mb-24">
           {allItems.map((item: any) => (
             <div
@@ -217,13 +242,18 @@ function ResepListPage() {
                 <p className="text-[10px] text-muted-foreground mt-1.5">
                   {formatDistanceToNow(new Date(item.created_at), { addSuffix: true, locale: idLocale })}
                 </p>
+                {item.last_updated_by_name && (
+                  <p className="text-[10px] text-muted-foreground">
+                    {T("Diupdate oleh")} {item.last_updated_by_name}
+                  </p>
+                )}
               </div>
             </div>
           ))}
         </div>
       )}
 
-      {hasNextPage && (
+      {!isError && hasNextPage && (
         <div className="flex justify-center mb-24">
           <Button variant="outline" onClick={() => fetchNextPage()} disabled={isFetchingNextPage}>
             {isFetchingNextPage ? T("Memuat...") : T("Muat Lebih")}

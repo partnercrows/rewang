@@ -9,7 +9,7 @@ import { formatRupiah, cn, daysUntil, normalizePhone } from "@/lib/utils";
 import { useState, useMemo, useRef } from "react";
 import { toast } from "sonner";
 import {
-  Plus, Trash2, MessageCircle, ChevronDown, FileDown,
+  Plus, Trash2, MessageCircle, ChevronDown, FileDown, Search,
   TrendingDown, Coins, Wallet, Banknote, Calendar, ReceiptText, CheckCircle2, BellRing,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -49,6 +49,8 @@ function KeuanganPage() {
   const [debtDialogOpen, setDebtDialogOpen] = useState(false);
   const [confirmDeleteBill, setConfirmDeleteBill] = useState<any>(null);
   const [confirmDeleteDebt, setConfirmDeleteDebt] = useState<any>(null);
+  const [billSearch, setBillSearch] = useState("");
+  const [billTypeFilter, setBillTypeFilter] = useState<string>(T("Semua"));
 
   // ---- BILLS (Tagihan) ----
   const { data: bills = [] } = useQuery({
@@ -68,7 +70,7 @@ function KeuanganPage() {
 
   const addBill = useMutation({
     mutationFn: async (v: any) => {
-      const { error } = await supabase.from("bills").insert({ ...v, family_id: familyId! });
+      const { error } = await supabase.from("bills").insert({ ...v, family_id: familyId!, last_updated_by: profile?.id, last_updated_by_name: profile?.full_name });
       if (error) throw error;
     },
     onSuccess: (_data, v) => {
@@ -91,7 +93,7 @@ function KeuanganPage() {
   const payBill = useMutation({
     mutationFn: async (bill: any) => {
       const now = new Date().toISOString();
-      const { error } = await supabase.from("bills").update({ is_paid: true, paid_at: now }).eq("id", bill.id);
+      const { error } = await supabase.from("bills").update({ is_paid: true, paid_at: now, last_updated_by: profile?.id, last_updated_by_name: profile?.full_name }).eq("id", bill.id);
       if (error) throw error;
       await supabase.from("bill_payments").insert({
         family_id: familyId!,
@@ -148,7 +150,7 @@ function KeuanganPage() {
 
   const addDebt = useMutation({
     mutationFn: async (v: any) => {
-      const { error } = await supabase.from("debts_credits").insert({ ...v, family_id: familyId! });
+      const { error } = await supabase.from("debts_credits").insert({ ...v, family_id: familyId!, last_updated_by: profile?.id, last_updated_by_name: profile?.full_name });
       if (error) throw error;
     },
     onSuccess: (_data, v) => {
@@ -225,6 +227,89 @@ function KeuanganPage() {
   const unpaidBills = useMemo(() => bills.filter((b: any) => !b.is_paid), [bills]);
   const paidBills = useMemo(() => bills.filter((b: any) => b.is_paid), [bills]);
 
+  const filteredUnpaidBills = useMemo(() => {
+    let filtered = unpaidBills;
+    if (billSearch) {
+      const s = billSearch.toLowerCase();
+      filtered = filtered.filter((b: any) => (b.bill_name ?? "").toLowerCase().includes(s));
+    }
+    if (billTypeFilter !== T("Semua")) {
+      filtered = filtered.filter((b: any) => b.bill_type === billTypeFilter);
+    }
+    return filtered;
+  }, [unpaidBills, billSearch, billTypeFilter, T]);
+
+  const filteredPaidBills = useMemo(() => {
+    let filtered = paidBills;
+    if (billSearch) {
+      const s = billSearch.toLowerCase();
+      filtered = filtered.filter((b: any) => (b.bill_name ?? "").toLowerCase().includes(s));
+    }
+    if (billTypeFilter !== T("Semua")) {
+      filtered = filtered.filter((b: any) => b.bill_type === billTypeFilter);
+    }
+    return filtered;
+  }, [paidBills, billSearch, billTypeFilter, T]);
+
+  const exportBillsPDF = async () => {
+    try {
+      const [{ jsPDF }, { default: autoTable }] = await Promise.all([
+        import("jspdf"),
+        import("jspdf-autotable"),
+      ]);
+      const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+      const pageW = doc.internal.pageSize.getWidth();
+      doc.setFillColor(0x17, 0x83, 0x7e);
+      doc.rect(0, 0, pageW, 22, "F");
+      doc.setTextColor(255, 255, 255);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(14);
+      doc.text("Rewang — Laporan Tagihan", 14, 14);
+      doc.setTextColor(80, 80, 80);
+      doc.setFontSize(8);
+      doc.setFont("helvetica", "normal");
+      doc.text(`Dicetak: ${new Date().toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}`, 14, 26);
+
+      const allBills = [...filteredUnpaidBills, ...filteredPaidBills];
+      if (allBills.length === 0) {
+        doc.setFontSize(10);
+        doc.text(T("Tidak ada tagihan", "No bills"), 14, 36);
+      } else {
+        autoTable(doc, {
+          startY: 30,
+          head: [["Nama Tagihan", "Nominal", "Jatuh Tempo", "Status", "Jenis"]],
+          body: allBills.map((b: any) => [
+            b.bill_name,
+            formatRupiah(b.nominal),
+            new Date(b.due_date).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" }),
+            b.is_paid ? "Lunas" : "Belum Lunas",
+            b.bill_type ?? "",
+          ]),
+          theme: "grid",
+          headStyles: { fillColor: [0x17, 0x83, 0x7e], textColor: [255, 255, 255], fontStyle: "bold", fontSize: 8 },
+          bodyStyles: { fontSize: 8, textColor: [50, 50, 50] },
+          alternateRowStyles: { fillColor: [0xfc, 0xfd, 0xfe] },
+          margin: { left: 14, right: 14 },
+        });
+      }
+      doc.setTextColor(170, 170, 170);
+      doc.setFontSize(7);
+      doc.text("Generated by Rewang — Family Household Management System", pageW / 2, doc.internal.pageSize.getHeight() - 10, { align: "center" });
+      const blob = doc.output("blob");
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "tagihan.pdf";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast.success(T("PDF terunduh", "PDF downloaded"));
+    } catch (e: any) {
+      toast.error(T("Gagal unduh PDF", "Failed to download PDF") + ": " + (e?.message ?? ""));
+    }
+  };
+
   // Auto-reset recurring bills
   useRecurringBillReset(familyId);
 
@@ -288,6 +373,35 @@ function KeuanganPage() {
       {/* ====== TAGIHAN TAB ====== */}
       {tab === "tagihan" && (
         <>
+          {/* Search & Filter + Export + Add */}
+          <div className="flex gap-2 mb-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                className="pl-9"
+                placeholder={T("Cari tagihan...", "Search bills...")}
+                value={billSearch}
+                onChange={(e) => setBillSearch(e.target.value)}
+              />
+            </div>
+            <Select value={billTypeFilter} onValueChange={setBillTypeFilter}>
+              <SelectTrigger className="w-[110px]"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value={T("Semua")}>{T("Semua", "All")}</SelectItem>
+                <SelectItem value="tagihan">{T("Tagihan", "Bill")}</SelectItem>
+                <SelectItem value="listrik">{T("Listrik", "Electricity")}</SelectItem>
+                <SelectItem value="air">{T("Air", "Water")}</SelectItem>
+                <SelectItem value="internet">{T("Internet", "Internet")}</SelectItem>
+                <SelectItem value="sewa">{T("Sewa", "Rent")}</SelectItem>
+                <SelectItem value="asuransi">{T("Asuransi", "Insurance")}</SelectItem>
+                <SelectItem value="lainnya">{T("Lainnya", "Other")}</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button size="icon" variant="outline" className="h-10 w-10 shrink-0" onClick={exportBillsPDF} title={T("Unduh PDF Tagihan", "Download Bills PDF")}>
+              <FileDown className="h-4 w-4" />
+            </Button>
+          </div>
+
           {/* Add Bill Dialog */}
           <Dialog open={billDialogOpen} onOpenChange={setBillDialogOpen}>
             <DialogTrigger asChild>
@@ -315,12 +429,12 @@ function KeuanganPage() {
           ) : (
             <div className="space-y-3 mb-24">
               {/* Unpaid section */}
-              {unpaidBills.length > 0 && (
+              {filteredUnpaidBills.length > 0 && (
                 <>
                   <h3 className="text-sm font-semibold text-destructive dark:text-red-400 mt-1">
-                    {T("Belum Lunas", "Unpaid")} ({unpaidBills.length})
+                    {T("Belum Lunas", "Unpaid")} ({filteredUnpaidBills.length})
                   </h3>
-                  {unpaidBills.map((b: any) => (
+                  {filteredUnpaidBills.map((b: any) => (
                     <BillCard
                       key={b.id}
                       bill={b}
@@ -333,12 +447,12 @@ function KeuanganPage() {
               )}
 
               {/* Paid section */}
-              {paidBills.length > 0 && (
+              {filteredPaidBills.length > 0 && (
                 <>
                   <h3 className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 mt-4">
-                    {T("Lunas", "Paid")} ({paidBills.length})
+                    {T("Lunas", "Paid")} ({filteredPaidBills.length})
                   </h3>
-                  {paidBills.map((b: any) => (
+                  {filteredPaidBills.map((b: any) => (
                     <BillCard
                       key={b.id}
                       bill={b}
@@ -348,6 +462,10 @@ function KeuanganPage() {
                     />
                   ))}
                 </>
+              )}
+
+              {filteredUnpaidBills.length === 0 && filteredPaidBills.length === 0 && (
+                <p className="text-center py-8 text-muted-foreground text-sm">{T("Tidak ada hasil", "No results")}</p>
               )}
             </div>
           )}
@@ -511,6 +629,9 @@ function BillCard({
             </span>
             {bill.bill_type && <span className="capitalize px-1.5 py-0.5 rounded bg-muted text-xs">{bill.bill_type}</span>}
           </div>
+          {bill.last_updated_by_name && (
+            <p className="text-[10px] text-muted-foreground mt-0.5">{T("Diupdate oleh")} {bill.last_updated_by_name}</p>
+          )}
         </div>
 
         <div className="flex flex-col items-end gap-1.5 shrink-0 ml-3">
@@ -693,168 +814,183 @@ function DebtCard({
   };
 
   const exportPDF = async () => {
-    const label = isHutang ? "Hutang" : "Piutang";
-    const title = `Laporan ${label} - ${d.person_name}`;
-    const paymentMethod = (l: any) => l.payment_method || "Cash";
-    const paymentDate = (l: any) => l.payment_date_input || l.payment_date;
-    const filename = `${title.replace(/[^a-z0-9]/gi, "_").toLowerCase()}.pdf`;
+    try {
+      const label = isHutang ? "Hutang" : "Piutang";
+      const title = `Laporan ${label} - ${d.person_name}`;
+      const paymentMethod = (l: any) => l.payment_method || "Cash";
+      const paymentDate = (l: any) => l.payment_date_input || l.payment_date;
+      const filename = `${title.replace(/[^a-z0-9]/gi, "_").toLowerCase()}.pdf`;
 
-    // Lazy-load jspdf + autotable
-    const { default: jsPDF } = await import("jspdf");
-    await import("jspdf-autotable");
-    const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-    const pageW = doc.internal.pageSize.getWidth();
-    let y = 16;
+      // Lazy-load jspdf + autotable
+      const [{ jsPDF }, { default: autoTable }] = await Promise.all([
+        import("jspdf"),
+        import("jspdf-autotable"),
+      ]);
+      const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+      const pageW = doc.internal.pageSize.getWidth();
+      let y = 16;
 
-    // Helper: draw centered text
-    const centered = (text: string, fontSize: number, style: string, offsetY: number) => {
-      doc.setFont("helvetica", style as any);
-      doc.setFontSize(fontSize);
-      const w = doc.getTextWidth(text);
-      doc.text(text, (pageW - w) / 2, y + offsetY);
-    };
+      // Helper: draw centered text
+      const centered = (text: string, fontSize: number, style: string, offsetY: number) => {
+        doc.setFont("helvetica", style as any);
+        doc.setFontSize(fontSize);
+        const w = doc.getTextWidth(text);
+        doc.text(text, (pageW - w) / 2, y + offsetY);
+      };
 
-    // Header
-    doc.setFillColor(0x17, 0x83, 0x7e); // tosca
-    doc.rect(0, 0, pageW, 28, "F");
-    doc.setTextColor(255, 255, 255);
-    centered("Rewang", 16, "bold", 12);
-    centered(title, 10, "normal", 22);
+      // Header
+      doc.setFillColor(0x17, 0x83, 0x7e); // tosca
+      doc.rect(0, 0, pageW, 28, "F");
+      doc.setTextColor(255, 255, 255);
+      centered("Rewang", 16, "bold", 12);
+      centered(title, 10, "normal", 22);
 
-    y = 34;
-    doc.setTextColor(80, 80, 80);
-    doc.setFontSize(8);
-    doc.setFont("helvetica", "normal");
-    doc.text(`Dicetak: ${new Date().toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })} — Generated by Rewang`, 14, y);
-    y += 6;
-
-    // Status badge
-    const statusLabel = isLunas ? "LUNAS" : remaining < Number(d.total_amount) ? "CICILAN BERJALAN" : "BELUM LUNAS";
-    const statusColors = isLunas
-      ? { bg: [0xd1, 0xfa, 0xe5], fg: [0x06, 0x5f, 0x46] }
-      : paid > 0
-        ? { bg: [0xfe, 0xf3, 0xc7], fg: [0x92, 0x40, 0x0e] }
-        : { bg: [0xfe, 0xe2, 0xe2], fg: [0xb9, 0x1c, 0x1c] };
-
-    doc.setFillColor(statusColors.bg[0], statusColors.bg[1], statusColors.bg[2]);
-    const badgeW = doc.getTextWidth(statusLabel) + 12;
-    doc.roundedRect(14, y, badgeW, 6, 3, 3, "F");
-    doc.setTextColor(statusColors.fg[0], statusColors.fg[1], statusColors.fg[2]);
-    doc.setFontSize(8);
-    doc.setFont("helvetica", "bold");
-    doc.text(statusLabel, 14 + 6, y + 4.2);
-    y += 10;
-
-    // Remaining box
-    if (!isLunas) {
-      doc.setFillColor(0xf9, 0xfa, 0xfb);
-      doc.setDrawColor(0xe5, 0xe7, 0xeb);
-      doc.roundedRect(14, y, pageW - 28, 14, 3, 3, "FD");
-      doc.setTextColor(120, 120, 120);
-      doc.setFontSize(7);
-      doc.text(isHutang ? "SISA HUTANG" : "SISA PIUTANG", pageW / 2, y + 5, { align: "center" });
-      doc.setTextColor(isHutang ? 220 : 5, isHutang ? 38 : 150, isHutang ? 38 : 105);
-      doc.setFontSize(16);
-      doc.setFont("helvetica", "bold");
-      doc.text(formatRupiah(remaining), pageW / 2, y + 12, { align: "center" });
-      y += 18;
-    }
-
-    // Info section
-    doc.setFontSize(8);
-    doc.setFont("helvetica", "normal");
-    const infoKey = (text: string) => { doc.setTextColor(100, 100, 100); doc.setFont("helvetica", "bold"); doc.text(text, 14, y); };
-    const infoVal = (text: string) => { doc.setTextColor(50, 50, 50); doc.setFont("helvetica", "normal"); doc.text(text, pageW - 14, y, { align: "right" }); };
-    const infoRow = (key: string, val: string) => {
-      infoKey(key);
-      infoVal(val);
-      y += 5;
-    };
-    infoRow("Nama", d.person_name);
-    if (d.phone_number) infoRow("WhatsApp", d.phone_number);
-    if (d.address) { infoKey("Alamat"); infoVal(""); y -= 5; doc.setFontSize(7); doc.text(d.address, 14, y + 3, { maxWidth: pageW - 28 }); y += 7; doc.setFontSize(8); }
-    infoRow("Jenis", isHutang ? "Hutang (Saya Berhutang)" : "Piutang (Berhutang ke Saya)");
-    if (d.start_date) infoRow("Tanggal Mulai", new Date(d.start_date).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }));
-    if (d.monthly_installment) infoRow("Cicilan per Bulan", formatRupiah(d.monthly_installment));
-    y += 4;
-
-    // Financial summary box
-    doc.setFillColor(0xf9, 0xfa, 0xfb);
-    doc.roundedRect(14, y, pageW - 28, 36, 3, 3, "F");
-    const sy = y + 5;
-    doc.setTextColor(130, 130, 130);
-    doc.setFontSize(7);
-    doc.setFont("helvetica", "bold");
-    doc.text("RINGKASAN KEUANGAN", 18, sy);
-
-    const summaryData = [
-      [`Total ${label}`, formatRupiah(d.total_amount)],
-      ["Total Terbayar", formatRupiah(paid)],
-      ["Sisa", formatRupiah(remaining)],
-      ["Progress", `${progress.toFixed(1)}%`],
-    ];
-    let rowY = sy + 6;
-    summaryData.forEach(([k, v]) => {
-      doc.setTextColor(100, 100, 100);
-      doc.setFont("helvetica", "normal");
-      doc.text(k, 18, rowY);
-      doc.setTextColor(k === "Sisa" ? (isHutang ? 220 : 5) : 50, k === "Sisa" ? (isHutang ? 38 : 150) : 50, k === "Sisa" ? (isHutang ? 38 : 105) : 50);
-      doc.setFont("helvetica", "bold");
-      doc.text(v, pageW - 18, rowY, { align: "right" });
-      rowY += 6;
-    });
-
-    // Progress bar
-    doc.setFillColor(0xe5, 0xe7, 0xeb);
-    doc.roundedRect(18, rowY - 2, pageW - 36, 4, 2, 2, "F");
-    doc.setFillColor(isHutang ? 220 : 5, isHutang ? 38 : 150, isHutang ? 38 : 105);
-    const barW = ((pageW - 36) * progress) / 100;
-    if (barW > 0) doc.roundedRect(18, rowY - 2, barW, 4, 2, 2, "F");
-    y += 42;
-
-    // Payment history table
-    if (logs.length > 0) {
+      y = 34;
       doc.setTextColor(80, 80, 80);
-      doc.setFontSize(9);
-      doc.setFont("helvetica", "bold");
-      doc.text("Riwayat Pembayaran", 14, y);
-      y += 5;
+      doc.setFontSize(8);
+      doc.setFont("helvetica", "normal");
+      doc.text(`Dicetak: ${new Date().toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })} — Generated by Rewang`, 14, y);
+      y += 6;
 
-      (doc as any).autoTable({
-        startY: y,
-        head: [["Tanggal", "Nominal", "Metode / Catatan"]],
-        body: logs.map((l: any) => [
-          new Date(paymentDate(l)).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }),
-          formatRupiah(l.amount_paid),
-          paymentMethod(l),
-        ]),
-        theme: "grid",
-        headStyles: { fillColor: [0xf9, 0xfa, 0xfb], textColor: [80, 80, 80], fontStyle: "bold", fontSize: 8 },
-        bodyStyles: { fontSize: 8, textColor: [50, 50, 50] },
-        alternateRowStyles: { fillColor: [0xfc, 0xfd, 0xfe] },
-        margin: { left: 14, right: 14 },
+      // Status badge
+      const statusLabel = isLunas ? "LUNAS" : remaining < Number(d.total_amount) ? "CICILAN BERJALAN" : "BELUM LUNAS";
+      const statusColors = isLunas
+        ? { bg: [0xd1, 0xfa, 0xe5], fg: [0x06, 0x5f, 0x46] }
+        : paid > 0
+          ? { bg: [0xfe, 0xf3, 0xc7], fg: [0x92, 0x40, 0x0e] }
+          : { bg: [0xfe, 0xe2, 0xe2], fg: [0xb9, 0x1c, 0x1c] };
+
+      doc.setFillColor(statusColors.bg[0], statusColors.bg[1], statusColors.bg[2]);
+      const badgeW = doc.getTextWidth(statusLabel) + 12;
+      doc.roundedRect(14, y, badgeW, 6, 3, 3, "F");
+      doc.setTextColor(statusColors.fg[0], statusColors.fg[1], statusColors.fg[2]);
+      doc.setFontSize(8);
+      doc.setFont("helvetica", "bold");
+      doc.text(statusLabel, 14 + 6, y + 4.2);
+      y += 10;
+
+      // Remaining box
+      if (!isLunas) {
+        doc.setFillColor(0xf9, 0xfa, 0xfb);
+        doc.setDrawColor(0xe5, 0xe7, 0xeb);
+        doc.roundedRect(14, y, pageW - 28, 14, 3, 3, "FD");
+        doc.setTextColor(120, 120, 120);
+        doc.setFontSize(7);
+        doc.text(isHutang ? "SISA HUTANG" : "SISA PIUTANG", pageW / 2, y + 5, { align: "center" });
+        doc.setTextColor(isHutang ? 220 : 5, isHutang ? 38 : 150, isHutang ? 38 : 105);
+        doc.setFontSize(16);
+        doc.setFont("helvetica", "bold");
+        doc.text(formatRupiah(remaining), pageW / 2, y + 12, { align: "center" });
+        y += 18;
+      }
+
+      // Info section
+      doc.setFontSize(8);
+      doc.setFont("helvetica", "normal");
+      const infoKey = (text: string) => { doc.setTextColor(100, 100, 100); doc.setFont("helvetica", "bold"); doc.text(text, 14, y); };
+      const infoVal = (text: string) => { doc.setTextColor(50, 50, 50); doc.setFont("helvetica", "normal"); doc.text(text, pageW - 14, y, { align: "right" }); };
+      const infoRow = (key: string, val: string) => {
+        infoKey(key);
+        infoVal(val);
+        y += 5;
+      };
+      infoRow("Nama", d.person_name);
+      if (d.phone_number) infoRow("WhatsApp", d.phone_number);
+      if (d.address) { infoKey("Alamat"); infoVal(""); y -= 5; doc.setFontSize(7); doc.text(d.address, 14, y + 3, { maxWidth: pageW - 28 }); y += 7; doc.setFontSize(8); }
+      infoRow("Jenis", isHutang ? "Hutang (Saya Berhutang)" : "Piutang (Berhutang ke Saya)");
+      if (d.start_date) infoRow("Tanggal Mulai", new Date(d.start_date).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }));
+      if (d.monthly_installment) infoRow("Cicilan per Bulan", formatRupiah(d.monthly_installment));
+      y += 4;
+
+      // Financial summary box
+      doc.setFillColor(0xf9, 0xfa, 0xfb);
+      doc.roundedRect(14, y, pageW - 28, 36, 3, 3, "F");
+      const sy = y + 5;
+      doc.setTextColor(130, 130, 130);
+      doc.setFontSize(7);
+      doc.setFont("helvetica", "bold");
+      doc.text("RINGKASAN KEUANGAN", 18, sy);
+
+      const summaryData = [
+        [`Total ${label}`, formatRupiah(d.total_amount)],
+        ["Total Terbayar", formatRupiah(paid)],
+        ["Sisa", formatRupiah(remaining)],
+        ["Progress", `${progress.toFixed(1)}%`],
+      ];
+      let rowY = sy + 6;
+      summaryData.forEach(([k, v]) => {
+        doc.setTextColor(100, 100, 100);
+        doc.setFont("helvetica", "normal");
+        doc.text(k, 18, rowY);
+        doc.setTextColor(k === "Sisa" ? (isHutang ? 220 : 5) : 50, k === "Sisa" ? (isHutang ? 38 : 150) : 50, k === "Sisa" ? (isHutang ? 38 : 105) : 50);
+        doc.setFont("helvetica", "bold");
+        doc.text(v, pageW - 18, rowY, { align: "right" });
+        rowY += 6;
       });
-      y = (doc as any).lastAutoTable.finalY + 6;
+
+      // Progress bar
+      doc.setFillColor(0xe5, 0xe7, 0xeb);
+      doc.roundedRect(18, rowY - 2, pageW - 36, 4, 2, 2, "F");
+      doc.setFillColor(isHutang ? 220 : 5, isHutang ? 38 : 150, isHutang ? 38 : 105);
+      const barW = ((pageW - 36) * progress) / 100;
+      if (barW > 0) doc.roundedRect(18, rowY - 2, barW, 4, 2, 2, "F");
+      y += 42;
+
+      // Payment history table
+      if (logs.length > 0) {
+        doc.setTextColor(80, 80, 80);
+        doc.setFontSize(9);
+        doc.setFont("helvetica", "bold");
+        doc.text("Riwayat Pembayaran", 14, y);
+        y += 5;
+
+        autoTable(doc, {
+          startY: y,
+          head: [["Tanggal", "Nominal", "Metode / Catatan"]],
+          body: logs.map((l: any) => [
+            new Date(paymentDate(l)).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }),
+            formatRupiah(l.amount_paid),
+            paymentMethod(l),
+          ]),
+          theme: "grid",
+          headStyles: { fillColor: [0xf9, 0xfa, 0xfb], textColor: [80, 80, 80], fontStyle: "bold", fontSize: 8 },
+          bodyStyles: { fontSize: 8, textColor: [50, 50, 50] },
+          alternateRowStyles: { fillColor: [0xfc, 0xfd, 0xfe] },
+          margin: { left: 14, right: 14 },
+        });
+        y = (doc as any).getNumberOfPages() > 0 ? (doc as any).lastAutoTable?.finalY ?? y + 6 : y + 6;
+      }
+
+      // Lunas banner
+      if (isLunas) {
+        doc.setFillColor(0xd1, 0xfa, 0xe5);
+        doc.roundedRect(14, y, pageW - 28, 10, 3, 3, "F");
+        doc.setTextColor(0x06, 0x5f, 0x46);
+        doc.setFontSize(10);
+        doc.setFont("helvetica", "bold");
+        doc.text("LUNAS", pageW / 2, y + 7, { align: "center" });
+        y += 16;
+      }
+
+      // Footer
+      doc.setTextColor(170, 170, 170);
+      doc.setFontSize(7);
+      doc.setFont("helvetica", "normal");
+      doc.text("Generated by Rewang — Family Household Management System", pageW / 2, doc.internal.pageSize.getHeight() - 10, { align: "center" });
+
+      const blob = doc.output("blob");
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast.success(T("PDF terunduh", "PDF downloaded"));
+    } catch (e: any) {
+      toast.error(T("Gagal unduh PDF", "Failed to download PDF") + ": " + (e?.message ?? ""));
     }
-
-    // Lunas banner
-    if (isLunas) {
-      doc.setFillColor(0xd1, 0xfa, 0xe5);
-      doc.roundedRect(14, y, pageW - 28, 10, 3, 3, "F");
-      doc.setTextColor(0x06, 0x5f, 0x46);
-      doc.setFontSize(10);
-      doc.setFont("helvetica", "bold");
-      doc.text("LUNAS", pageW / 2, y + 7, { align: "center" });
-      y += 16;
-    }
-
-    // Footer
-    doc.setTextColor(170, 170, 170);
-    doc.setFontSize(7);
-    doc.setFont("helvetica", "normal");
-    doc.text("Generated by Rewang — Family Household Management System", pageW / 2, doc.internal.pageSize.getHeight() - 10, { align: "center" });
-
-    doc.save(filename);
   };
 
   return (
@@ -878,9 +1014,12 @@ function DebtCard({
             <h3 className="font-semibold truncate">{d.person_name}</h3>
           </div>
           {d.phone_number && <p className="text-xs text-muted-foreground mt-0.5">{d.phone_number}</p>}
+          {d.last_updated_by_name && (
+            <p className="text-[10px] text-muted-foreground mt-0.5">{T("Diupdate oleh")} {d.last_updated_by_name}</p>
+          )}
         </div>
         <div className="flex gap-1">
-          <Button size="icon" variant="ghost" className="h-8 w-8" onClick={exportPDF} title="Unduh PDF">
+          <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => exportPDF()} title="Unduh PDF">
             <FileDown className="h-4 w-4 text-muted-foreground hover:text-primary" />
           </Button>
           <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={() => onDeletePrompt(d)}>

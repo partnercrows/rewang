@@ -321,10 +321,16 @@ function RecipeTab() {
   const [edit, setEdit] = useState<any>(null);
   const [detail, setDetail] = useState<any>(null);
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [filterCat, setFilterCat] = useState<string>(T("Semua"));
   const [catMgrOpen, setCatMgrOpen] = useState(false);
   const [confirmDeleteRecipe, setConfirmDeleteRecipe] = useState<any>(null);
   const observerRef = useRef<IntersectionObserver | null>(null);
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search), 400);
+    return () => clearTimeout(t);
+  }, [search]);
 
   const { data: cats = [] } = useQuery({
     queryKey: ["recipe-cats", familyId],
@@ -345,7 +351,7 @@ function RecipeTab() {
     isLoading,
     isError,
   } = useInfiniteQuery({
-    queryKey: ["recipes", familyId, search, filterCat],
+    queryKey: ["recipes", familyId, debouncedSearch, filterCat],
     enabled: !!familyId,
     initialPageParam: 0,
     queryFn: async ({ pageParam = 0 }) => {
@@ -357,7 +363,7 @@ function RecipeTab() {
         .order("created_at", { ascending: false })
         .range(pageParam, pageParam + RECIPES_PER_PAGE - 1);
 
-      if (search) q = q.ilike("title", `%${search}%`);
+      if (debouncedSearch) q = q.ilike("title", `%${debouncedSearch}%`);
       if (filterCat !== T("Semua")) q = q.eq("category", filterCat);
 
       const { data, error, count } = await q;
@@ -391,12 +397,16 @@ function RecipeTab() {
         category: vals.category,
         image_url: vals.image_url || null,
         description: vals.description || null,
-        created_by: profile?.id,
+        last_updated_by: profile?.id,
+        last_updated_by_name: profile?.full_name,
       };
       if (vals.id) {
+        payload.updated_at = new Date().toISOString();
         const { error } = await supabase.from("recipes").update(payload).eq("id", vals.id);
         if (error) throw error;
       } else {
+        payload.created_by = profile?.id;
+        payload.created_by_name = profile?.full_name;
         const { error } = await supabase.from("recipes").insert(payload);
         if (error) throw error;
       }
@@ -507,7 +517,10 @@ function RecipeTab() {
                 </div>
                 <div className="p-2.5">
                   <p className="font-semibold text-sm line-clamp-2 leading-tight">{recipe.title}</p>
-                  <p className="text-[10px] text-muted-foreground mt-1">
+                  {recipe.last_updated_by_name && (
+                    <p className="text-[10px] text-muted-foreground mt-0.5">{T("Diupdate oleh")} {recipe.last_updated_by_name}</p>
+                  )}
+                  <p className="text-[10px] text-muted-foreground mt-0.5">
                     {formatDistanceToNow(new Date(recipe.created_at), { addSuffix: true, locale: idLocale })}
                   </p>
                 </div>
@@ -538,42 +551,54 @@ function RecipeTab() {
 
       {/* Detail Dialog */}
       <Dialog open={!!detail} onOpenChange={(o) => { if (!o) setDetail(null); }}>
-        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto p-0">
           {detail && (
             <>
-              {detail.image_url && (
-                <div className="aspect-video bg-muted rounded-lg overflow-hidden mb-4">
-                  <img src={detail.image_url} alt={detail.title} className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+              {detail.image_url ? (
+                <div className="relative aspect-video overflow-hidden rounded-t-lg">
+                  <img src={detail.image_url} alt={detail.title} className="absolute inset-0 w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent flex flex-col justify-end p-4">
+                    {detail.category && (
+                      <span className="inline-block w-fit px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-white/20 backdrop-blur text-white mb-1.5">
+                        {detail.category}
+                      </span>
+                    )}
+                    <h2 className="text-xl font-bold text-white">{detail.title}</h2>
+                  </div>
                 </div>
+              ) : (
+                <DialogHeader className="space-y-1.5 p-4 pb-0">
+                  {detail.category && (
+                    <span className="inline-block w-fit px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-primary/10 text-primary">
+                      {detail.category}
+                    </span>
+                  )}
+                  <DialogTitle className="text-lg">{detail.title}</DialogTitle>
+                </DialogHeader>
               )}
-              <DialogHeader className="space-y-1.5">
-                {detail.category && (
-                  <span className="inline-block w-fit px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-primary/10 text-primary">
-                    {detail.category}
-                  </span>
-                )}
-                <DialogTitle className="text-lg">{detail.title}</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-3">
+              <div className="space-y-3 p-4">
                 {detail.description && (
                   <div>
                     <p className="text-xs font-semibold text-muted-foreground mb-1">{T("Deskripsi")}</p>
                     <p className="text-sm text-muted-foreground whitespace-pre-wrap">{detail.description}</p>
                   </div>
                 )}
+                {detail.last_updated_by_name && (
+                  <p className="text-[11px] text-muted-foreground">{T("Diupdate oleh")} {detail.last_updated_by_name}</p>
+                )}
                 <p className="text-[11px] text-muted-foreground">
                   {T("Dibuat")} {formatDistanceToNow(new Date(detail.created_at), { addSuffix: true, locale: idLocale })}
                   {detail.updated_at && detail.updated_at !== detail.created_at && ` · ${T("Diupdate")} ${formatDistanceToNow(new Date(detail.updated_at), { addSuffix: true, locale: idLocale })}`}
                 </p>
               </div>
-              <DialogFooter className="flex gap-2 mt-2">
+              <div className="flex gap-2 p-4 pt-0">
                 <Button variant="outline" className="flex-1" onClick={() => { setEdit(detail); setDetail(null); }}>
                   <Edit2 className="h-4 w-4 mr-1" /> {T("Edit")}
                 </Button>
                 <Button variant="destructive" className="flex-1" onClick={() => setConfirmDeleteRecipe(detail)}>
                   <Trash2 className="h-4 w-4 mr-1" /> {T("Hapus")}
                 </Button>
-              </DialogFooter>
+              </div>
             </>
           )}
         </DialogContent>
@@ -649,7 +674,7 @@ function WishlistTab() {
 
   const add = useMutation({
     mutationFn: async (v: any) => {
-      const { error } = await supabase.from("wishlist_items").insert({ ...v, family_id: familyId! });
+      const { error } = await supabase.from("wishlist_items").insert({ ...v, family_id: familyId!, last_updated_by: profile?.id, last_updated_by_name: profile?.full_name });
       if (error) throw error;
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["wishlist", familyId] }); toast.success(T("Wishlist ditambah")); setOpen(false); },
@@ -657,7 +682,7 @@ function WishlistTab() {
 
   const buy = useMutation({
     mutationFn: async (item: any) => {
-      await supabase.from("wishlist_items").update({ purchased_at: new Date().toISOString() }).eq("id", item.id);
+      await supabase.from("wishlist_items").update({ purchased_at: new Date().toISOString(), last_updated_by: profile?.id, last_updated_by_name: profile?.full_name }).eq("id", item.id);
       await supabase.from("shopping_items").insert({ family_id: familyId!, item_name: item.item_name, category: "Lainnya", quantity_decimal: 1, current_stock: 1, min_stock: 1, unit: "pcs", last_updated_by: profile?.id, last_updated_by_name: profile?.full_name });
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["wishlist", familyId] }); qc.invalidateQueries({ queryKey: ["shopping", familyId] }); toast.success(T("Dipindahkan ke stok")); },
@@ -682,6 +707,9 @@ function WishlistTab() {
                 </div>
                 <p className="text-xs text-primary font-medium mt-0.5">{formatRupiah(w.estimated_price ?? 0)}</p>
                 {w.notes && <p className="text-[11px] text-muted-foreground mt-1">{w.notes}</p>}
+                {w.last_updated_by_name && (
+                  <p className="text-[10px] text-muted-foreground mt-0.5">{T("Diupdate oleh")} {w.last_updated_by_name}</p>
+                )}
               </div>
               <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={() => setConfirmDeleteWishlist(w)}><Trash2 className="h-4 w-4" /></Button>
             </div>

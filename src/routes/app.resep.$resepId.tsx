@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ChevronLeft, Edit2, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { formatDistanceToNow } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
 
@@ -28,12 +29,13 @@ export const Route = createFileRoute("/app/resep/$resepId")({
 
 function ResepDetailPage() {
   const { T } = useLang();
-  const { family } = useAuth();
+  const { family, profile } = useAuth();
   const familyId = family?.id;
   const qc = useQueryClient();
   const navigate = useNavigate();
   const { resepId } = Route.useParams();
 
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [formTitle, setFormTitle] = useState("");
   const [formDescription, setFormDescription] = useState("");
@@ -66,7 +68,9 @@ function ResepDetailPage() {
           image_url: formImageUrl.trim() || null,
           category: formCategory,
           updated_at: new Date().toISOString(),
-        })
+          last_updated_by: profile?.id,
+          last_updated_by_name: profile?.full_name,
+        } as any)
         .eq("id", resepId);
       if (error) throw error;
     },
@@ -96,9 +100,7 @@ function ResepDetailPage() {
   });
 
   const handleDelete = () => {
-    if (window.confirm(T("Yakin ingin menghapus resep ini?"))) {
-      deleteMutation.mutate();
-    }
+    setConfirmDelete(true);
   };
 
   const openEditDialog = () => {
@@ -134,37 +136,47 @@ function ResepDetailPage() {
         {T("Kembali ke Resep")}
       </Button>
 
-      {/* Image */}
+      {/* Image with overlay */}
       {recipe.image_url ? (
-        <div className="rounded-xl overflow-hidden mb-4 aspect-[4/3] bg-muted">
-          <img src={recipe.image_url} alt={recipe.title} className="w-full h-full object-cover" />
+        <div className="relative aspect-video rounded-xl overflow-hidden mb-4 bg-muted">
+          <img src={recipe.image_url} alt={recipe.title} className="absolute inset-0 w-full h-full object-cover" />
+          <div className="absolute inset-0 flex flex-col justify-end p-4 bg-gradient-to-t from-black/60 to-transparent">
+            <span className="inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold bg-primary/80 text-white w-fit mb-1.5">
+              {recipe.category}
+            </span>
+            <h1 className="text-lg font-extrabold text-white drop-shadow-lg">{recipe.title}</h1>
+            <div className="flex items-center gap-2 text-xs text-white/80 mt-1">
+              <span>{recipe.created_by_name ?? T("Anggota")}</span>
+              <span>·</span>
+              <span>{formatDistanceToNow(new Date(recipe.created_at), { addSuffix: true, locale: idLocale })}</span>
+              {recipe.updated_at && recipe.updated_at !== recipe.created_at && (
+                <>
+                  <span>·</span>
+                  <span>{T("Diperbarui")} {formatDistanceToNow(new Date(recipe.updated_at), { addSuffix: true, locale: idLocale })}</span>
+                </>
+              )}
+            </div>
+          </div>
         </div>
       ) : (
-        <div className="rounded-xl overflow-hidden mb-4 aspect-[4/3] bg-muted flex items-center justify-center text-muted-foreground">
-          {T("Tanpa Gambar")}
-        </div>
-      )}
-
-      {/* Category badge */}
-      <span className="inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold bg-primary/10 text-primary mb-2">
-        {recipe.category}
-      </span>
-
-      {/* Title */}
-      <h1 className="text-xl font-extrabold mb-2">{recipe.title}</h1>
-
-      {/* Meta info */}
-      <div className="flex items-center gap-2 text-xs text-muted-foreground mb-4">
-        <span>{recipe.created_by_name ?? T("Anggota")}</span>
-        <span>·</span>
-        <span>{formatDistanceToNow(new Date(recipe.created_at), { addSuffix: true, locale: idLocale })}</span>
-        {recipe.updated_at && recipe.updated_at !== recipe.created_at && (
-          <>
+        <>
+          <span className="inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold bg-primary/10 text-primary mb-2">
+            {recipe.category}
+          </span>
+          <h1 className="text-xl font-extrabold mb-2">{recipe.title}</h1>
+          <div className="flex items-center gap-2 text-xs text-muted-foreground mb-4">
+            <span>{recipe.created_by_name ?? T("Anggota")}</span>
             <span>·</span>
-            <span>{T("Diperbarui")} {formatDistanceToNow(new Date(recipe.updated_at), { addSuffix: true, locale: idLocale })}</span>
-          </>
-        )}
-      </div>
+            <span>{formatDistanceToNow(new Date(recipe.created_at), { addSuffix: true, locale: idLocale })}</span>
+            {recipe.updated_at && recipe.updated_at !== recipe.created_at && (
+              <>
+                <span>·</span>
+                <span>{T("Diperbarui")} {formatDistanceToNow(new Date(recipe.updated_at), { addSuffix: true, locale: idLocale })}</span>
+              </>
+            )}
+          </div>
+        </>
+      )}
 
       {/* Description */}
       {recipe.description ? (
@@ -234,6 +246,14 @@ function ResepDetailPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {/* Confirm Delete Dialog */}
+      <ConfirmDialog
+        open={confirmDelete}
+        onOpenChange={setConfirmDelete}
+        title={T("Yakin ingin menghapus resep ini?")}
+        confirmLabel={T("Hapus")}
+        onConfirm={() => deleteMutation.mutate()}
+      />
     </MainLayout>
   );
 }
