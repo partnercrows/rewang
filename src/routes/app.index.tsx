@@ -131,11 +131,11 @@ function BerandaPage() {
         <AgendaSection familyId={familyId!} />
       </div>
 
-      {/* Quick notes */}
-      <div className="mb-5 overflow-hidden">
-        <SectionHeader title={T("Catatan rumah", "House notes")} />
-        <QuickNotesCard familyId={familyId!} />
-      </div>
+       {/* Quick notes */}
+       <div className="mb-5">
+         <SectionHeader title={T("Catatan rumah", "House notes")} />
+         <QuickNotesCard familyId={familyId!} />
+       </div>
 
       {/* Today's Tasks — simplified checklist */}
       <div className="mb-5">
@@ -635,15 +635,18 @@ function QuickNotesCard({ familyId }: { familyId: string }) {
       {notes.length === 0 ? (
         <p className="text-xs text-muted-foreground text-center py-4 bg-card border border-dashed border-border rounded-2xl">Belum ada catatan</p>
       ) : (
-        <div className="grid grid-cols-2 gap-2 [contain:layout_style]">
-          {notes.map((n: any, i: number) => (
+        <div className="grid grid-cols-2 gap-2 will-change-transform">
+          {notes.map((n: any) => {
+              const colorId = n.id?.charCodeAt?.(0) ?? 0;
+              const isEven = colorId % 2 === 0;
+              return (
               <div
               key={n.id}
                 className={cn(
-                  "relative p-3 rounded-xl text-sm shadow-soft font-note min-h-[5rem] break-inside-avoid",
+                  "relative p-3 rounded-xl text-sm shadow-soft font-note min-h-[5rem]",
                   n.is_pinned
                     ? "bg-warning/20 dark:bg-warning/20 border border-warning/40"
-                    : i % 2 === 0
+                    : isEven
                       ? "bg-[oklch(0.95_0.04_85)] dark:bg-[oklch(0.28_0.04_80)] border border-warning/20 dark:border-warning/30"
                       : "bg-[oklch(0.93_0.04_120)] dark:bg-[oklch(0.25_0.04_130)] border border-accent/40 dark:border-accent/30",
                 )}
@@ -657,7 +660,8 @@ function QuickNotesCard({ familyId }: { familyId: string }) {
               <p className="leading-snug break-words pr-10 text-[15px]">{n.content}</p>
               {n.created_by_name && <p className="text-[10px] text-muted-foreground/80 mt-1.5 font-body">— {n.created_by_name}</p>}
             </div>
-          ))}
+          );
+          })}
         </div>
       )}
       <ConfirmDialog
