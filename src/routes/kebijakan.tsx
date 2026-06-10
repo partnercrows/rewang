@@ -1,6 +1,6 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { Navbar } from "@/components/landing/Navbar";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { Footer } from "@/components/landing/Footer";
+import { Home, ArrowLeft } from "lucide-react";
 
 export const Route = createFileRoute("/kebijakan")({
   component: KebijakanPage,
@@ -9,8 +9,30 @@ export const Route = createFileRoute("/kebijakan")({
 function KebijakanPage() {
   return (
     <div className="min-h-screen bg-[#fef9ef] font-body">
-      <Navbar />
-      <main className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 py-12 sm:py-16 lg:py-20">
+      {/* Simple header — no "Fitur / Harga" links */}
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-xl shadow-soft border-b border-[#d4e5e0]">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="flex h-16 items-center justify-between">
+            <a
+              href="/"
+              className="flex items-center gap-2 font-heading text-xl font-bold text-[#2d6a4f]"
+            >
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-[#7d9b76] to-[#52b788] text-white shadow-soft">
+                <Home className="h-5 w-5" />
+              </div>
+              Rewang
+            </a>
+            <Link
+              to="/"
+              className="flex items-center gap-1.5 rounded-xl border border-[#b5c99a] px-4 py-2 text-sm font-semibold text-[#4a6b5d] transition-all hover:bg-[#e8f5e9] hover:border-[#7d9b76]"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Kembali
+            </Link>
+          </div>
+        </div>
+      </nav>
+      <main className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 pt-28 pb-12 sm:pt-32 sm:pb-16 lg:pt-36 lg:pb-20">
         <h1 className="text-3xl sm:text-4xl font-heading font-extrabold text-[#2d4a22] mb-8">
           Kebijakan Privasi
         </h1>
