@@ -104,7 +104,7 @@ function SignupPage() {
 
           <p className="mt-3 text-center text-xs text-muted-foreground">
             Dengan mendaftar, Anda menyetujui{" "}
-            <Link to="/kebijakan" className="text-primary hover:underline">Kebijakan Privasi & Ketentuan Layanan</Link>
+            <a href="/kebijakan" className="text-primary hover:underline">Kebijakan Privasi & Ketentuan Layanan</a>
           </p>
         </div>
       </div>

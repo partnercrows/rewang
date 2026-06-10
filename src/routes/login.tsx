@@ -26,7 +26,7 @@ function LoginPage() {
     setLoading(false);
     if (error) return toast.error(error.message);
     toast.success("Selamat datang kembali!");
-    navigate({ to: "/" });
+    navigate({ to: "/app" });
   };
 
   const handleGoogle = async () => {
@@ -122,7 +122,7 @@ function LoginPage() {
 
           <p className="mt-3 text-center text-xs text-muted-foreground">
             Dengan masuk, Anda menyetujui{" "}
-            <Link to="/kebijakan" className="text-primary hover:underline">Kebijakan Privasi & Ketentuan Layanan</Link>
+            <a href="/kebijakan" className="text-primary hover:underline">Kebijakan Privasi & Ketentuan Layanan</a>
           </p>
         </div>
       </div>
