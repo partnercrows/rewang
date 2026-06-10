@@ -103,10 +103,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } else {
         setProfile(null);
         setFamily(null);
-        if (!initialEventFired) {
-          initialEventFired = true;
-          setLoading(false);
-        }
+        // Don't set loading=false here for OAuth flow.
+        // Let getSession() timeout finalize loading to prevent premature redirect.
       }
       router.invalidate();
     });
