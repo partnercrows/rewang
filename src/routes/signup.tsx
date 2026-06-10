@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Home, Loader2, Eye, EyeOff } from "lucide-react";
+import { Home, Loader2, Eye, EyeOff, ArrowLeft } from "lucide-react";
 
 export const Route = createFileRoute("/signup")({
   head: () => ({ meta: [{ title: "Daftar — Rumahku" }] }),
@@ -55,6 +55,11 @@ function SignupPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-secondary/40 to-accent/30 p-4">
       <div className="w-full max-w-md">
+        <Link to="/" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-6">
+          <ArrowLeft className="h-4 w-4" />
+          Kembali
+        </Link>
+
         <div className="text-center mb-8">
           <div className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-soft mb-3">
             <Home className="h-7 w-7" />
@@ -95,6 +100,11 @@ function SignupPage() {
           <p className="mt-5 text-center text-sm text-muted-foreground">
             Sudah punya akun?{" "}
             <Link to="/login" className="text-primary font-medium hover:underline">Masuk</Link>
+          </p>
+
+          <p className="mt-3 text-center text-xs text-muted-foreground">
+            Dengan mendaftar, Anda menyetujui{" "}
+            <Link to="/kebijakan" className="text-primary hover:underline">Kebijakan Privasi & Ketentuan Layanan</Link>
           </p>
         </div>
       </div>

@@ -5,8 +5,57 @@
 //     error logger plugins, and sandbox detection (port/host/strictPort).
 // You can pass additional config via defineConfig({ vite: { ... }, etc... }) if needed.
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
+import { VitePWA } from "vite-plugin-pwa";
 
 export default defineConfig({
+  vite: {
+    plugins: [
+      VitePWA({
+        registerType: "autoUpdate",
+        devOptions: {
+          enabled: true,
+        },
+        manifest: {
+          name: "Rewang - Kolaborasi Rumah Tangga",
+          short_name: "Rewang",
+          description:
+            "Aplikasi kolaborasi rumah tangga: stok belanja, tagihan, hutang-piutang, dan papan tugas keluarga dalam satu aplikasi.",
+          theme_color: "#7d9b76",
+          background_color: "#ffffff",
+          display: "standalone",
+          orientation: "portrait",
+          scope: "/",
+          start_url: "/app",
+          icons: [
+            {
+              src: "/pwa-192x192.png",
+              sizes: "192x192",
+              type: "image/png",
+            },
+            {
+              src: "/pwa-512x512.png",
+              sizes: "512x512",
+              type: "image/png",
+              purpose: "any maskable",
+            },
+          ],
+        },
+        workbox: {
+          globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
+          runtimeCaching: [
+            {
+              urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,
+              handler: "NetworkFirst",
+              options: {
+                cacheName: "supabase-api",
+                expiration: { maxEntries: 200, maxAgeSeconds: 60 * 60 * 24 },
+              },
+            },
+          ],
+        },
+      }),
+    ],
+  },
   nitro: {
     preset: "vercel",
   },
