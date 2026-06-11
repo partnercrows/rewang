@@ -33,7 +33,9 @@ function AppLayout() {
     return <OAuthErrorPage error={error} errorCode={error_code} errorDescription={error_description} />;
   }
 
-  if (loading) {
+  // Keep showing spinner until auth state is fully resolved (session + profile loaded)
+  // This prevents premature redirects during auth state transitions
+  if (loading || (session && !profile)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-6 w-6 animate-spin text-primary" />

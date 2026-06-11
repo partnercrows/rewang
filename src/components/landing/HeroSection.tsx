@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Link } from "@tanstack/react-router";
 import {
   CalendarCheck,
@@ -33,21 +33,7 @@ const slides = [
 
 export function HeroSection() {
   const [currentSlide, setCurrentSlide] = useState(0);
-  const sliderRef = useRef<HTMLDivElement>(null);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const isProgrammaticScroll = useRef(false);
-
-  const goToSlide = useCallback((index: number) => {
-    const el = sliderRef.current;
-    if (!el) return;
-    isProgrammaticScroll.current = true;
-    const slideWidth = el.children[0]?.clientWidth ?? el.clientWidth;
-    el.scrollTo({ left: index * slideWidth, behavior: "smooth" });
-    // Reset the flag after the smooth scroll completes
-    setTimeout(() => {
-      isProgrammaticScroll.current = false;
-    }, 500);
-  }, []);
+  const [isPaused, setIsPaused] = useState(false);
 
   const nextSlide = useCallback(() => {
     setCurrentSlide((prev) => (prev + 1) % slides.length);
@@ -57,40 +43,14 @@ export function HeroSection() {
     setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length);
   }, []);
 
-  // Sync scroll position with currentSlide
-  useEffect(() => {
-    goToSlide(currentSlide);
-  }, [currentSlide, goToSlide]);
-
   // Auto-play
   useEffect(() => {
-    intervalRef.current = setInterval(() => {
+    if (isPaused) return;
+    const interval = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % slides.length);
     }, 4000);
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-    };
-  }, []);
-
-  // Handle manual scroll
-  const handleScroll = () => {
-    // Ignore scroll events triggered programmatically
-    if (isProgrammaticScroll.current) return;
-
-    const el = sliderRef.current;
-    if (!el) return;
-    const scrollLeft = el.scrollLeft;
-    const slideWidth = el.children[0]?.clientWidth ?? el.clientWidth;
-    const newIndex = Math.round(scrollLeft / slideWidth);
-    if (newIndex !== currentSlide) {
-      setCurrentSlide(newIndex);
-    }
-    // Reset auto-play on manual scroll
-    if (intervalRef.current) clearInterval(intervalRef.current);
-    intervalRef.current = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % slides.length);
-    }, 4000);
-  };
+    return () => clearInterval(interval);
+  }, [isPaused]);
 
   return (
     <section
@@ -181,23 +141,28 @@ export function HeroSection() {
             <p className="text-xs text-[#9db5a6] mb-4">Didesain khusus untuk HP</p>
 
             {/* Slider container */}
-            <div className="relative w-full max-w-sm">
-              {/* Slides */}
+            <div
+              className="relative w-full max-w-sm overflow-hidden rounded-3xl"
+              onMouseEnter={() => setIsPaused(true)}
+              onMouseLeave={() => setIsPaused(false)}
+              onTouchStart={() => setIsPaused(true)}
+              onTouchEnd={() => setTimeout(() => setIsPaused(false), 3000)}
+            >
+              {/* Slides track */}
               <div
-                ref={sliderRef}
-                onScroll={handleScroll}
-                className="flex overflow-x-auto snap-x snap-mandatory scrollbar-hide scroll-smooth rounded-3xl"
-                style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+                className="flex transition-transform duration-500 ease-in-out"
+                style={{ transform: `translateX(-${currentSlide * 100}%)` }}
               >
                 {slides.map((slide) => (
                   <div
                     key={slide.id}
-                    className="flex-shrink-0 w-full snap-center px-2 py-4 flex flex-col items-center"
+                    className="w-full flex-shrink-0 px-2 py-4 flex flex-col items-center"
                   >
                     <img
                       src={slide.image}
                       alt={slide.title}
                       className="w-full max-w-[260px] sm:max-w-[280px] rounded-2xl shadow-lg border-2 border-[#e8ede6]"
+                      draggable={false}
                     />
                     <p className="mt-3 text-sm font-semibold text-[#2d4a22]">{slide.title}</p>
                     <p className="text-xs text-[#9db5a6]">{slide.subtitle}</p>
@@ -243,9 +208,6 @@ export function HeroSection() {
         @keyframes float {
           0%, 100% { transform: translateY(0px); }
           50% { transform: translateY(-20px); }
-        }
-        .scrollbar-hide::-webkit-scrollbar {
-          display: none;
         }
       `}</style>
     </section>

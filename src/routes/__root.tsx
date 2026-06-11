@@ -67,33 +67,57 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   head: () => ({
     meta: [
       { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1, maximum-scale=1" },
+      {
+        name: "viewport",
+        content: "width=device-width, initial-scale=1, maximum-scale=1",
+      },
       { title: "Rewang App - Kolaborasi Rumah Tangga" },
       {
         name: "description",
         content:
           "Aplikasi kolaborasi rumah tangga: stok belanja, tagihan, hutang-piutang, dan papan tugas keluarga dalam satu aplikasi.",
       },
-        { name: "theme-color", content: "#7d9b76" },
-        { name: "apple-mobile-web-app-capable", content: "yes" },
-        { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
-        { name: "apple-mobile-web-app-title", content: "Rewang" },
-        { name: "mobile-web-app-capable", content: "yes" },
+      { name: "theme-color", content: "#7d9b76" },
+      { name: "apple-mobile-web-app-capable", content: "yes" },
+      { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
+      { name: "apple-mobile-web-app-title", content: "Rewang" },
+      { name: "mobile-web-app-capable", content: "yes" },
+      {
+        name: "application-name",
+        content: "Rewang",
+      },
       { property: "og:title", content: "Rewang App - Kolaborasi Rumah Tangga" },
-      { property: "og:description", content: "Rewang membantu urusan rumah tangga jadi lebih sat-set. Atur belanja rutin, countdown tagihan, catatan cicilan, dan tugas keluarga dalam satu aplikasi." },
+      {
+        property: "og:description",
+        content:
+          "Rewang membantu urusan rumah tangga jadi lebih sat-set. Atur belanja rutin, countdown tagihan, catatan cicilan, dan tugas keluarga dalam satu aplikasi.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:title", content: "Rewang App - Kolaborasi Rumah Tangga" },
-      { name: "description", content: "Rewang membantu urusan rumah tangga jadi lebih sat-set. Atur belanja rutin, countdown tagihan, catatan cicilan, dan tugas keluarga dalam satu aplikasi." },
-      { name: "twitter:description", content: "Rewang membantu urusan rumah tangga jadi lebih sat-set. Atur belanja rutin, countdown tagihan, catatan cicilan, dan tugas keluarga dalam satu aplikasi." },
-      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/39ee2285-3dff-4d79-aa24-8a67fc193ce4" },
-      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/39ee2285-3dff-4d79-aa24-8a67fc193ce4" },
+      {
+        name: "twitter:description",
+        content:
+          "Rewang membantu urusan rumah tangga jadi lebih sat-set. Atur belanja rutin, countdown tagihan, catatan cicilan, dan tugas keluarga dalam satu aplikasi.",
+      },
+      {
+        property: "og:image",
+        content:
+          "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/39ee2285-3dff-4d79-aa24-8a67fc193ce4",
+      },
+      {
+        name: "twitter:image",
+        content:
+          "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/39ee2285-3dff-4d79-aa24-8a67fc193ce4",
+      },
       { name: "twitter:card", content: "summary_large_image" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
       { rel: "manifest", href: "/manifest.webmanifest" },
-      { rel: "apple-touch-icon", href: "/pwa-192x192.png" },
+      { rel: "apple-touch-icon", href: "/pwa-180x180.png" },
+      { rel: "apple-touch-icon", href: "/pwa-192x192.png", sizes: "192x192" },
       { rel: "icon", href: "/pwa-192x192.png", sizes: "192x192", type: "image/png" },
+      { rel: "icon", href: "/pwa-512x512.png", sizes: "512x512", type: "image/png" },
     ],
   }),
   shellComponent: RootShell,
