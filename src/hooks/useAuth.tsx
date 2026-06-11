@@ -11,6 +11,9 @@ export type Profile = {
   phone_number: string | null;
   family_id: string | null;
   role: string | null;
+  is_active: boolean;
+  subscription_tier: string;
+  subscription_expires_at: string | null;
 };
 
 export type Family = {
@@ -42,7 +45,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const loadProfile = async (userId: string): Promise<Profile | null> => {
     let { data: prof } = await supabase
       .from("profiles")
-      .select("id,email,full_name,avatar_url,phone_number,family_id,role")
+      .select("id,email,full_name,avatar_url,phone_number,family_id,role,is_active,subscription_tier,subscription_expires_at")
       .eq("id", userId)
       .maybeSingle();
 
@@ -53,7 +56,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await new Promise((r) => setTimeout(r, 200));
       const { data: refetched } = await supabase
         .from("profiles")
-        .select("id,email,full_name,avatar_url,phone_number,family_id,role")
+        .select("id,email,full_name,avatar_url,phone_number,family_id,role,is_active,subscription_tier,subscription_expires_at")
         .eq("id", userId)
         .maybeSingle();
       prof = refetched;

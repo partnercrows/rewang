@@ -43,6 +43,18 @@ function AppLayout() {
     );
   }
   if (!session) return <Navigate to="/login" replace />;
+
+  // === SUBSCRIPTION GATE ===
+  // Cek apakah akun aktif dan belum expired
+  const sekarang = new Date();
+  const tanggalExpired = profile?.subscription_expires_at ? new Date(profile.subscription_expires_at) : null;
+  const akunTerkunci = !profile?.is_active || (tanggalExpired && sekarang >= tanggalExpired);
+
+  if (akunTerkunci) {
+    return <Navigate to="/aktivasi" replace />;
+  }
+  // === END SUBSCRIPTION GATE ===
+
   if (!profile?.family_id) return <Navigate to="/onboarding" replace />;
   return <Outlet />;
 }

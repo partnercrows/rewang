@@ -5,6 +5,7 @@ import { useLang } from "@/hooks/useLang";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useRecurringReset } from "@/hooks/useRecurringReset";
+import { useSubscriptionGate } from "@/hooks/useSubscriptionGate";
 import { formatRupiah, daysUntil, initials, cn } from "@/lib/utils";
 import {
   Package, ReceiptText, TrendingDown, Coins, Calendar, Pin, Trash2,
@@ -159,6 +160,7 @@ function BerandaPage() {
 function TodayTasksSimple({ familyId }: { familyId: string }) {
   const { T } = useLang();
   const { profile } = useAuth();
+  const limits = useSubscriptionGate();
   const qc = useQueryClient();
   const todayStr = new Date().toISOString().slice(0, 10);
   useRecurringReset(familyId);
@@ -326,8 +328,18 @@ function TodayTasksSimple({ familyId }: { familyId: string }) {
         </div>
       )}
 
-      {/* Add task dialog — controlled so it closes on success */}
-      <AddTaskSimpleDialog familyId={familyId} profile={profile} onSuccess={() => qc.invalidateQueries({ queryKey: ["daily-tasks", familyId] })} />
+      {/* Add task dialog — controlled so it closes on success; gate by daily limit */}
+      {limits.tier === "starter" && tasks.filter((t: any) => t.created_at?.slice(0, 10) === todayStr).length >= limits.maxTasksPerDay ? (
+        <div className="mt-2 rounded-xl bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 p-3 text-center">
+          <p className="text-xs font-semibold text-amber-700 dark:text-amber-300">Batas 5 tugas/hari tercapai</p>
+          <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-0.5">Upgrade ke Family untuk tugas tak terbatas</p>
+          <Button asChild size="sm" variant="outline" className="mt-2 rounded-xl text-xs">
+            <Link to="/aktivasi">Upgrade →</Link>
+          </Button>
+        </div>
+      ) : (
+        <AddTaskSimpleDialog familyId={familyId} profile={profile} onSuccess={() => qc.invalidateQueries({ queryKey: ["daily-tasks", familyId] })} />
+      )}
 
       <ConfirmDialog
         open={!!confirmDeleteTask}

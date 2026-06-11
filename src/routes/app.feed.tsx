@@ -1,7 +1,8 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { useAuth } from "@/hooks/useAuth";
 import { useLang } from "@/hooks/useLang";
+import { useSubscriptionGate } from "@/hooks/useSubscriptionGate";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState } from "react";
@@ -9,7 +10,7 @@ import { initials, cn } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
 import { enUS } from "date-fns/locale";
-import { Calendar as CalendarIcon, Filter, X, RotateCcw } from "lucide-react";
+import { Calendar as CalendarIcon, Filter, X, RotateCcw, Lock } from "lucide-react";
 import { type DateRange } from "react-day-picker";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -67,8 +68,32 @@ function getCategory(entityType: string | null, actionType: string | null): Cate
 function FeedPage() {
   const { family } = useAuth();
   const { lang, T } = useLang();
+  const limits = useSubscriptionGate();
   const familyId = family?.id;
   const qc = useQueryClient();
+
+  // Paywall untuk user starter — tidak bisa akses feed
+  if (!limits.canAccessFeed) {
+    return (
+      <MainLayout>
+        <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
+          <div className="h-16 w-16 rounded-2xl bg-muted flex items-center justify-center mb-4">
+            <Lock className="h-8 w-8 text-muted-foreground" />
+          </div>
+          <h1 className="text-xl font-bold mb-2">{T("Fitur Premium", "Premium Feature")}</h1>
+          <p className="text-sm text-muted-foreground mb-6 max-w-xs">
+            {T(
+              "Feed aktivitas tersedia untuk paket Family. Upgrade sekarang untuk melihat semua aktivitas anggota keluarga.",
+              "Activity feed is available for Family plan. Upgrade now to see all family member activities."
+            )}
+          </p>
+          <Button asChild className="rounded-xl">
+            <Link to="/aktivasi">{T("Upgrade ke Family", "Upgrade to Family")}</Link>
+          </Button>
+        </div>
+      </MainLayout>
+    );
+  }
 
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [selectedMember, setSelectedMember] = useState<string | null>(null);

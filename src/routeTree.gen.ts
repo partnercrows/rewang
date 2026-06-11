@@ -14,6 +14,8 @@ import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as KebijakanRouteImport } from './routes/kebijakan'
 import { Route as AppRouteImport } from './routes/app'
+import { Route as AktivasiRouteImport } from './routes/aktivasi'
+import { Route as AdminRewangControlRouteImport } from './routes/admin-rewang-control'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppIndexRouteImport } from './routes/app.index'
 import { Route as AppTugasRouteImport } from './routes/app.tugas'
@@ -48,6 +50,16 @@ const KebijakanRoute = KebijakanRouteImport.update({
 const AppRoute = AppRouteImport.update({
   id: '/app',
   path: '/app',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AktivasiRoute = AktivasiRouteImport.update({
+  id: '/aktivasi',
+  path: '/aktivasi',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminRewangControlRoute = AdminRewangControlRouteImport.update({
+  id: '/admin-rewang-control',
+  path: '/admin-rewang-control',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -103,6 +115,8 @@ const AppResepResepIdRoute = AppResepResepIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/admin-rewang-control': typeof AdminRewangControlRoute
+  '/aktivasi': typeof AktivasiRoute
   '/app': typeof AppRouteWithChildren
   '/kebijakan': typeof KebijakanRoute
   '/login': typeof LoginRoute
@@ -120,6 +134,8 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/admin-rewang-control': typeof AdminRewangControlRoute
+  '/aktivasi': typeof AktivasiRoute
   '/kebijakan': typeof KebijakanRoute
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
@@ -137,6 +153,8 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/admin-rewang-control': typeof AdminRewangControlRoute
+  '/aktivasi': typeof AktivasiRoute
   '/app': typeof AppRouteWithChildren
   '/kebijakan': typeof KebijakanRoute
   '/login': typeof LoginRoute
@@ -156,6 +174,8 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/admin-rewang-control'
+    | '/aktivasi'
     | '/app'
     | '/kebijakan'
     | '/login'
@@ -173,6 +193,8 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/admin-rewang-control'
+    | '/aktivasi'
     | '/kebijakan'
     | '/login'
     | '/onboarding'
@@ -189,6 +211,8 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/admin-rewang-control'
+    | '/aktivasi'
     | '/app'
     | '/kebijakan'
     | '/login'
@@ -207,6 +231,8 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AdminRewangControlRoute: typeof AdminRewangControlRoute
+  AktivasiRoute: typeof AktivasiRoute
   AppRoute: typeof AppRouteWithChildren
   KebijakanRoute: typeof KebijakanRoute
   LoginRoute: typeof LoginRoute
@@ -249,6 +275,20 @@ declare module '@tanstack/react-router' {
       path: '/app'
       fullPath: '/app'
       preLoaderRoute: typeof AppRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/aktivasi': {
+      id: '/aktivasi'
+      path: '/aktivasi'
+      fullPath: '/aktivasi'
+      preLoaderRoute: typeof AktivasiRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin-rewang-control': {
+      id: '/admin-rewang-control'
+      path: '/admin-rewang-control'
+      fullPath: '/admin-rewang-control'
+      preLoaderRoute: typeof AdminRewangControlRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -362,6 +402,8 @@ const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AdminRewangControlRoute: AdminRewangControlRoute,
+  AktivasiRoute: AktivasiRoute,
   AppRoute: AppRouteWithChildren,
   KebijakanRoute: KebijakanRoute,
   LoginRoute: LoginRoute,
