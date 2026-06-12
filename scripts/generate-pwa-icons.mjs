@@ -1,7 +1,7 @@
 import sharp from "sharp";
 import { readFileSync, mkdirSync } from "fs";
 
-const bgColor = "#7d9b76";
+const bgColor = "#ffffff";
 
 mkdirSync("public", { recursive: true });
 

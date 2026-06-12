@@ -30,8 +30,8 @@ export default defineConfig({
           short_name: "Rewang",
           description:
             "Aplikasi kolaborasi rumah tangga: stok belanja, tagihan, hutang-piutang, dan papan tugas keluarga dalam satu aplikasi.",
-          theme_color: "#7d9b76",
-          background_color: "#7d9b76",
+          theme_color: "#ffffff",
+          background_color: "#ffffff",
           display: "standalone",
           display_override: ["standalone", "fullscreen"],
           prefer_related_applications: false,
