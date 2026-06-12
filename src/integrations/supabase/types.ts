@@ -584,9 +584,12 @@ export type Database = {
           family_id: string | null
           full_name: string
           id: string
+          is_active: boolean
           last_active_at: string | null
           phone_number: string | null
           role: string
+          subscription_expires_at: string | null
+          subscription_tier: string
           updated_at: string
         }
         Insert: {
@@ -597,9 +600,12 @@ export type Database = {
           family_id?: string | null
           full_name: string
           id: string
+          is_active?: boolean
           last_active_at?: string | null
           phone_number?: string | null
           role?: string
+          subscription_expires_at?: string | null
+          subscription_tier?: string
           updated_at?: string
         }
         Update: {
@@ -610,9 +616,12 @@ export type Database = {
           family_id?: string | null
           full_name?: string
           id?: string
+          is_active?: boolean
           last_active_at?: string | null
           phone_number?: string | null
           role?: string
+          subscription_expires_at?: string | null
+          subscription_tier?: string
           updated_at?: string
         }
         Relationships: [

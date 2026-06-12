@@ -35,6 +35,18 @@ function OnboardingPage() {
     );
   }
   if (!session) return <Navigate to="/login" search={{}} replace />;
+
+  // === SUBSCRIPTION GATE ===
+  // Cek apakah akun terkunci sebelum mengizinkan onboarding
+  const sekarang = new Date();
+  const tanggalExpired = profile?.subscription_expires_at ? new Date(profile.subscription_expires_at) : null;
+  const akunTerkunci = !profile?.is_active || profile?.subscription_tier === "none" || (tanggalExpired && sekarang >= tanggalExpired);
+
+  if (akunTerkunci) {
+    return <Navigate to="/aktivasi" replace />;
+  }
+  // === END SUBSCRIPTION GATE ===
+
   if (profile?.family_id) return <Navigate to="/app" search={{}} replace />;
 
   const handleCreate = async (e: React.FormEvent) => {

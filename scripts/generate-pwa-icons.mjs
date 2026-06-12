@@ -1,37 +1,53 @@
 import sharp from "sharp";
-import { mkdirSync } from "fs";
+import { readFileSync, mkdirSync } from "fs";
 
 const bgColor = "#7d9b76";
-const textColor = "#ffffff";
 
 mkdirSync("public", { recursive: true });
 
-/**
- * Generate a PWA icon as PNG.
- *
- * For Android maskable icons, the content must sit inside a safe zone
- * (the inner ~60 % of the canvas).  We build the SVG with padding baked in
- * so the same file can be used for both "any" and "maskable" purposes.
- */
-const sizes = [192, 512, 180]; // 180 = apple-touch-icon
+// Read the actual logo SVG
+const svgBuffer = readFileSync("public/rewang.svg");
 
-for (const size of sizes) {
-  // Safe zone: 40 % margin on each side → content = 60 % of canvas
-  const safeMargin = Math.round(size * 0.4);
-  const innerSize = size - safeMargin * 2;
-  const cornerRadius = Math.round(innerSize * 0.222);
-  const fontSize = Math.round(innerSize * 0.6);
+const icons = [
+  // Maskable icons: logo must sit inside safe zone (~60% of canvas)
+  { size: 144, name: "pwa-144x144.png", maskable: true },
+  { size: 192, name: "pwa-192x192.png", maskable: true },
+  { size: 512, name: "pwa-512x512.png", maskable: true },
+  // Apple touch icon: full-bleed
+  { size: 180, name: "pwa-180x180.png", maskable: false },
+];
 
-  const svg = `<svg width="${size}" height="${size}" xmlns="http://www.w3.org/2000/svg">
-  <rect width="100%" height="100%" fill="${bgColor}"/>
-  <rect x="${safeMargin}" y="${safeMargin}" width="${innerSize}" height="${innerSize}" rx="${cornerRadius}" fill="${bgColor}"/>
-  <text x="${size / 2}" y="${size / 2 + fontSize * 0.08}" font-family="Arial,sans-serif" font-size="${fontSize}" font-weight="bold" fill="${textColor}" text-anchor="middle" dominant-baseline="central">R</text>
-</svg>`;
+for (const { size, name, maskable } of icons) {
+  if (maskable) {
+    // Render logo at 60% of canvas, then pad to full size
+    const logoSize = Math.round(size * 0.6);
+    const pad = Math.ceil((size - logoSize) / 2);
 
-  // sharp reads the SVG and renders it at exactly `size×size`
-  const outPath = `public/pwa-${size}x${size}.png`;
-  await sharp(Buffer.from(svg)).resize(size, size).png().toFile(outPath);
-  console.log(`✔  ${outPath}  (${size}×${size}, safe-zone built-in)`);
+    await sharp(svgBuffer)
+      .resize(logoSize, logoSize, { fit: "contain", background: bgColor })
+      .extend({
+        top: pad,
+        bottom: pad,
+        left: pad,
+        right: pad,
+        background: bgColor,
+      })
+      .png()
+      .toFile(`public/${name}`);
+  } else {
+    await sharp(svgBuffer)
+      .resize(size, size, { fit: "contain", background: bgColor })
+      .png()
+      .toFile(`public/${name}`);
+  }
+  console.log(`✔  public/${name}  (${size}×${size})`);
 }
 
-console.log("All PWA icons generated successfully.");
+// Generate favicon.ico from the SVG logo (full-bleed, no background)
+await sharp(svgBuffer)
+  .resize(48, 48, { fit: "cover" })
+  .png()
+  .toFile("public/favicon.ico");
+console.log("✔  public/favicon.ico  (48×48)");
+
+console.log("All PWA icons generated successfully from rewang.svg.");

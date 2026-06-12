@@ -144,21 +144,11 @@ function FamilySection() {
     },
   });
 
-  const updateRole = useMutation({
-    mutationFn: async ({ id, role }: { id: string; role: string }) => {
-      const { error } = await supabase.from("profiles").update({ role }).eq("id", id);
-      if (error) throw error;
-    },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["family-members"] }); toast.success("Role diperbarui"); },
-  });
-
   const copyCode = () => {
     if (!family) return;
     navigator.clipboard.writeText(family.invite_code);
     toast.success("Kode disalin!");
   };
-
-  const isAdmin = profile?.role === "admin";
 
   return (
     <section className="bg-card border border-border rounded-2xl p-5 mb-4 shadow-soft">
@@ -191,20 +181,10 @@ function FamilySection() {
                 <p className="text-[10px] text-muted-foreground/70 truncate">Terakhir online: {timeAgo(m.last_active_at)}</p>
               )}
             </div>
-            {isAdmin && m.id !== profile?.id ? (
-              <Select value={m.role ?? "anggota"} onValueChange={(v) => updateRole.mutate({ id: m.id, role: v })}>
-                <SelectTrigger className="w-28 h-8 text-xs"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="admin">Admin</SelectItem>
-                  <SelectItem value="anggota">Anggota</SelectItem>
-                </SelectContent>
-              </Select>
-            ) : (
-              <span className={cn("text-[10px] font-bold uppercase px-2 py-1 rounded-full inline-flex items-center gap-1",
-                m.role === "admin" ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground")}>
-                {m.role === "admin" && <Crown className="h-2.5 w-2.5" />}{m.role ?? "anggota"}
-              </span>
-            )}
+            <span className={cn("text-[10px] font-bold uppercase px-2 py-1 rounded-full inline-flex items-center gap-1",
+              m.role === "admin" ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground")}>
+              {m.role === "admin" && <Crown className="h-2.5 w-2.5" />}{m.role ?? "anggota"}
+            </span>
           </div>
         ))}
       </div>

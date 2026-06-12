@@ -21,7 +21,7 @@ export default defineConfig({
         // Ensure the service worker is served at the root so it can control the whole scope
         base: "/",
         // Include assets from the build
-        includeAssets: ["favicon.ico", "pwa-192x192.png", "pwa-512x512.png"],
+        includeAssets: ["favicon.ico", "rewang.svg", "pwa-144x144.png", "pwa-180x180.png", "pwa-192x192.png", "pwa-512x512.png"],
         devOptions: {
           enabled: true,
         },
@@ -36,7 +36,7 @@ export default defineConfig({
           display_override: ["standalone", "fullscreen"],
           prefer_related_applications: false,
           orientation: "portrait",
-          scope: "/",
+          scope: "/app",
           start_url: "/app",
           lang: "id",
           categories: ["lifestyle", "productivity", "utilities"],
@@ -64,6 +64,12 @@ export default defineConfig({
             },
           ],
           icons: [
+            {
+              src: "/pwa-144x144.png",
+              sizes: "144x144",
+              type: "image/png",
+              purpose: "any maskable",
+            },
             {
               src: "/pwa-192x192.png",
               sizes: "192x192",
