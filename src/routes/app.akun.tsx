@@ -106,9 +106,6 @@ function ProfileSection() {
         <div className="min-w-0">
           <h2 className="text-lg font-bold truncate">{profile?.full_name}</h2>
           <p className="text-xs opacity-90 truncate">{profile?.email}</p>
-          {profile?.role && <span className="inline-flex items-center gap-1 text-[10px] mt-1 bg-white/20 px-2 py-0.5 rounded-full font-bold uppercase">
-            {profile.role === "admin" && <Crown className="h-3 w-3" />}{profile.role}
-          </span>}
         </div>
       </div>
       <div className="space-y-2 bg-white/10 backdrop-blur rounded-2xl p-3">
@@ -181,10 +178,6 @@ function FamilySection() {
                 <p className="text-[10px] text-muted-foreground/70 truncate">Terakhir online: {timeAgo(m.last_active_at)}</p>
               )}
             </div>
-            <span className={cn("text-[10px] font-bold uppercase px-2 py-1 rounded-full inline-flex items-center gap-1",
-              m.role === "admin" ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground")}>
-              {m.role === "admin" && <Crown className="h-2.5 w-2.5" />}{m.role ?? "anggota"}
-            </span>
           </div>
         ))}
       </div>

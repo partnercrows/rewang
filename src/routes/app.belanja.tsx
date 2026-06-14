@@ -637,13 +637,16 @@ function RecipeForm({ initial, categories, onSubmit, busy }: { initial: any; cat
     <form onSubmit={(e) => { e.preventDefault(); onSubmit({ id: initial?.id, title, category, image_url, description }); }} className="space-y-3">
       <div><Label>{T("Judul")}</Label><Input required value={title} onChange={(e) => setTitle(e.target.value)} placeholder={T("Nama resep")} /></div>
       <div><Label>{T("Kategori")}</Label>
-        <Select value={selectValue} onValueChange={setCategory}>
-          <SelectTrigger><SelectValue placeholder={T("Pilih kategori")} /></SelectTrigger>
-          <SelectContent>
-            {(categories.length === 0 || !categories.includes(category)) && <SelectItem value="" disabled>{T("Belum ada kategori")}</SelectItem>}
-            {categories.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-          </SelectContent>
-        </Select>
+        {categories.length > 0 ? (
+          <Select value={category && categories.includes(category) ? category : categories[0]} onValueChange={setCategory}>
+            <SelectTrigger><SelectValue placeholder={T("Pilih kategori")} /></SelectTrigger>
+            <SelectContent>
+              {categories.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        ) : (
+          <Input value={category} onChange={(e) => setCategory(e.target.value)} placeholder={T("Nama kategori")} />
+        )}
       </div>
       <div><Label>{T("URL Gambar")}</Label><Input value={image_url} onChange={(e) => setImageUrl(e.target.value)} placeholder="https://..." /></div>
       <div><Label>{T("Deskripsi")}</Label><Textarea rows={3} value={description} onChange={(e) => setDescription(e.target.value)} placeholder={T("Bahan, langkah memasak...")} /></div>

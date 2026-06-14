@@ -1,4 +1,4 @@
-import { createFileRoute, Link, Navigate } from "@tanstack/react-router";
+import { createFileRoute, Navigate } from "@tanstack/react-router";
 import { useAuth } from "@/hooks/useAuth";
 import {
   Loader2,
@@ -9,6 +9,7 @@ import {
   ArrowRight,
   Clock,
   AlertTriangle,
+  LogOut,
 } from "lucide-react";
 
 export const Route = createFileRoute("/aktivasi")({
@@ -59,8 +60,22 @@ const plans = [
   },
 ];
 
+function getWaUrl(planName?: string) {
+  const base = "https://wa.me/6281311474713";
+  const text = planName
+    ? `Halo Admin Rewang %F0%9F%91%8B%0A%0ASaya ingin berlangganan Paket ${planName} untuk penggunaan Rewang App.%0A%0AMohon informasi mengenai proses pembayaran dan aktivasi akun.%0A%0ATerima kasih %F0%9F%98%8A`
+    : "Halo Admin Rewang %F0%9F%91%8B%0A%0ASaya tertarik dengan Rewang App dan ingin informasi lebih lanjut mengenai paket langganan yang tersedia.%0A%0ATerima kasih %F0%9F%98%8A";
+  return `${base}?text=${text}`;
+}
+
 function AktivasiPage() {
-  const { session, profile, loading } = useAuth();
+  const { session, profile, loading, signOut } = useAuth();
+
+  const handleLogout = async () => {
+    await signOut();
+    // Redirect to landing page after logout
+    window.location.href = "/";
+  };
 
   if (loading) {
     return (
@@ -112,13 +127,14 @@ function AktivasiPage() {
       <div className="sticky top-0 z-10 border-b border-[#e8ede6] bg-white/80 backdrop-blur">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            <Link
-              to="/"
-              className="text-sm font-medium text-[#4a6b5d] hover:text-[#2d4a22] transition-colors"
-            >
-              ← Kembali ke Beranda
-            </Link>
             <span className="text-sm text-[#9db5a6]">{profile?.email}</span>
+            <button
+              onClick={handleLogout}
+              className="inline-flex items-center gap-2 rounded-xl border-2 border-[#e8ede6] bg-white px-4 py-2 text-sm font-medium text-[#4a6b5d] hover:bg-[#e8f5e9] hover:border-[#52b788] transition-all"
+            >
+              <LogOut className="h-4 w-4" />
+              Logout
+            </button>
           </div>
         </div>
       </div>
@@ -244,7 +260,7 @@ function AktivasiPage() {
                 </ul>
 
                 <a
-                  href="https://wa.me/6281311474713"
+                  href={getWaUrl(plan.name)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className={`flex items-center justify-center gap-2 w-full text-center rounded-2xl px-6 py-3.5 text-sm font-semibold transition-all duration-300 ${plan.buttonStyle}`}
@@ -260,7 +276,7 @@ function AktivasiPage() {
             <p className="text-sm text-[#9db5a6]">
               Butuh bantuan memilih?{" "}
               <a
-                href="https://wa.me/6281311474713"
+                href={getWaUrl()}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-[#52b788] font-semibold hover:underline"
