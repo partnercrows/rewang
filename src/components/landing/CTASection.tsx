@@ -1,6 +1,12 @@
 import { MessageCircle, ArrowRight, Sparkles } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 
+function getWaUrl() {
+  const base = "https://wa.me/6281294097650";
+  const text = "Halo Admin Rewang %F0%9F%91%8B%0A%0ASaya tertarik dengan Rewang App dan ingin informasi lebih lanjut mengenai paket langganan yang tersedia.%0A%0ATerima kasih %F0%9F%98%8A";
+  return `${base}?text=${text}`;
+}
+
 export function CTASection() {
   return (
     <section className="relative py-12 sm:py-16 lg:py-20 overflow-hidden">
@@ -43,7 +49,7 @@ export function CTASection() {
 
         <div className="mt-10 flex flex-col sm:flex-row items-center gap-4 justify-center">
           <a
-            href="https://wa.me/6281311474713"
+            href={getWaUrl()}
             target="_blank"
             rel="noopener noreferrer"
             className="group inline-flex items-center gap-2 rounded-2xl bg-white px-8 py-4 text-base font-semibold text-[#2d6a4f] shadow-2xl shadow-black/20 hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300"

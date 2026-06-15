@@ -40,7 +40,7 @@ function OnboardingPage() {
   // Cek apakah akun terkunci sebelum mengizinkan onboarding
   const sekarang = new Date();
   const tanggalExpired = profile?.subscription_expires_at ? new Date(profile.subscription_expires_at) : null;
-  const akunTerkunci = !profile?.is_active || profile?.subscription_tier === "none" || (tanggalExpired && sekarang >= tanggalExpired);
+  const akunTerkunci = !profile?.is_active || profile?.subscription_tier === "none" || (tanggalExpired && sekarang >= new Date(tanggalExpired.getFullYear(), tanggalExpired.getMonth(), tanggalExpired.getDate() + 1));
 
   if (akunTerkunci) {
     return <Navigate to="/aktivasi" replace />;

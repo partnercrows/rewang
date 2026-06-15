@@ -59,10 +59,10 @@ export function useSubscriptionGate(): SubscriptionLimits {
     ? new Date(profile.subscription_expires_at)
     : null;
 
-  // Cek aktif & belum expired
+  // Cek aktif & belum expired (expired at end of day, 23:59:59)
   const isActive =
     profile.is_active === true &&
-    (!tanggalExpired || sekarang < tanggalExpired);
+    (!tanggalExpired || sekarang < new Date(tanggalExpired.getFullYear(), tanggalExpired.getMonth(), tanggalExpired.getDate() + 1));
 
   const tier = (profile.subscription_tier as SubscriptionTier) || "none";
 

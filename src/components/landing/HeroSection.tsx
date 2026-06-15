@@ -10,24 +10,32 @@ import {
   ChevronRight,
 } from "lucide-react";
 
+const bannerVersion = "v2"; // bump this when replacing banner images
+
+function getWaUrl() {
+  const base = "https://wa.me/6281294097650";
+  const text = "Halo Admin Rewang %F0%9F%91%8B%0A%0ASaya tertarik dengan Rewang App dan ingin informasi lebih lanjut mengenai paket langganan yang tersedia.%0A%0ATerima kasih %F0%9F%98%8A";
+  return `${base}?text=${text}`;
+}
+
 const slides = [
   {
     id: 1,
     title: "Dashboard",
     subtitle: "Semua dalam satu layar",
-    image: "/images/banner/1.png",
+    image: `/images/banner/1.png?${bannerVersion}`,
   },
   {
     id: 2,
     title: "Agenda & Tugas",
     subtitle: "Atur jadwal keluarga",
-    image: "/images/banner/2.png",
+    image: `/images/banner/2.png?${bannerVersion}`,
   },
   {
     id: 3,
     title: "Belanja & Keuangan",
     subtitle: "Pantau pengeluaran",
-    image: "/images/banner/3.png",
+    image: `/images/banner/3.png?${bannerVersion}`,
   },
 ];
 
@@ -111,7 +119,7 @@ export function HeroSection() {
                 <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
               </Link>
               <a
-                href="https://wa.me/6281311474713"
+                href={getWaUrl()}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="group inline-flex items-center gap-2 rounded-2xl border-2 border-[#b5c99a] bg-white/80 backdrop-blur-sm px-8 py-4 text-base font-semibold text-[#4a6b5d] hover:bg-[#e8f5e9] hover:border-[#7d9b76] shadow-soft transition-all duration-300"

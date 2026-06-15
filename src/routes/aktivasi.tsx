@@ -61,7 +61,7 @@ const plans = [
 ];
 
 function getWaUrl(planName?: string) {
-  const base = "https://wa.me/6281311474713";
+  const base = "https://wa.me/6281294097650";
   const text = planName
     ? `Halo Admin Rewang %F0%9F%91%8B%0A%0ASaya ingin berlangganan Paket ${planName} untuk penggunaan Rewang App.%0A%0AMohon informasi mengenai proses pembayaran dan aktivasi akun.%0A%0ATerima kasih %F0%9F%98%8A`
     : "Halo Admin Rewang %F0%9F%91%8B%0A%0ASaya tertarik dengan Rewang App dan ingin informasi lebih lanjut mengenai paket langganan yang tersedia.%0A%0ATerima kasih %F0%9F%98%8A";
@@ -95,7 +95,8 @@ function AktivasiPage() {
 
   const tier = (profile?.subscription_tier as string) || "none";
   const expiresAt = profile?.subscription_expires_at;
-  const isExpired = expiresAt ? new Date(expiresAt) < new Date() : false;
+  // Expired at end of day, not start of day
+  const isExpired = expiresAt ? new Date() >= new Date(new Date(expiresAt).getFullYear(), new Date(expiresAt).getMonth(), new Date(expiresAt).getDate() + 1) : false;
 
   let statusBadge: {
     icon: React.ReactNode;

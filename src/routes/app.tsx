@@ -48,7 +48,11 @@ function AppLayout() {
   // Cek apakah akun aktif, punya tier valid, dan belum expired
   const sekarang = new Date();
   const tanggalExpired = profile?.subscription_expires_at ? new Date(profile.subscription_expires_at) : null;
-  const akunTerkunci = !profile?.is_active || profile?.subscription_tier === "none" || (tanggalExpired && sekarang >= tanggalExpired);
+  // Expired at end of the expiration day (23:59:59), not start of day
+  const isExpired = tanggalExpired
+    ? sekarang >= new Date(tanggalExpired.getFullYear(), tanggalExpired.getMonth(), tanggalExpired.getDate() + 1)
+    : false;
+  const akunTerkunci = !profile?.is_active || profile?.subscription_tier === "none" || isExpired;
 
   if (akunTerkunci) {
     return <Navigate to="/aktivasi" replace />;

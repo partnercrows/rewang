@@ -1,6 +1,14 @@
 import { Check, Zap, Star } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 
+function getWaUrl(planName?: string) {
+  const base = "https://wa.me/6281294097650";
+  const text = planName
+    ? `Halo Admin Rewang %F0%9F%91%8B%0A%0ASaya ingin berlangganan Paket ${planName} untuk penggunaan Rewang App.%0A%0AMohon informasi mengenai proses pembayaran dan aktivasi akun.%0A%0ATerima kasih %F0%9F%98%8A`
+    : "Halo Admin Rewang %F0%9F%91%8B%0A%0ASaya tertarik dengan Rewang App dan ingin informasi lebih lanjut mengenai paket langganan yang tersedia.%0A%0ATerima kasih %F0%9F%98%8A";
+  return `${base}?text=${text}`;
+}
+
 const plans = [
   {
     name: "Starter",
@@ -121,7 +129,7 @@ export function PricingSection() {
 
               {/* CTA */}
               <a
-                href="https://wa.me/6281311474713"
+                href={getWaUrl(plan.name)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className={`block w-full text-center rounded-2xl px-6 py-3.5 text-sm font-semibold transition-all duration-300 ${plan.buttonStyle}`}
@@ -136,7 +144,7 @@ export function PricingSection() {
         <p className="text-center text-sm text-[#9db5a6] mt-8">
           Butuh bantuan memilih?{" "}
           <a
-            href="https://wa.me/6281311474713"
+            href={getWaUrl()}
             target="_blank"
             rel="noopener noreferrer"
             className="text-[#52b788] font-semibold hover:underline"

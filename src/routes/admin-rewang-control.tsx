@@ -54,6 +54,7 @@ interface ProfileRow {
   is_active?: boolean | null;
   subscription_tier?: string | null;
   subscription_expires_at?: string | null;
+  last_active_at?: string | null;
 }
 
 interface EditableUser {
@@ -141,7 +142,7 @@ function AdminPanelContent({
       const { data, error } = await supabase
         .from("profiles")
         .select(
-          "id, email, full_name, avatar_url, role, is_active, subscription_tier, subscription_expires_at",
+          "id, email, full_name, avatar_url, role, is_active, subscription_tier, subscription_expires_at, last_active_at",
         )
         .order("email", { ascending: true });
 
@@ -283,6 +284,9 @@ function AdminPanelContent({
       Tier: user.subscription_tier || "none",
       Expired: user.subscription_expires_at
         ? new Date(user.subscription_expires_at).toLocaleDateString("id-ID")
+        : "-",
+      "Last Login": user.last_active_at
+        ? new Date(user.last_active_at).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" }) + " " + new Date(user.last_active_at).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })
         : "-",
     }));
 
@@ -549,6 +553,9 @@ function AdminPanelContent({
                       </div>
                     </th>
                     <th className="px-4 py-3 font-medium text-[#6b7d6a]">
+                      Last Login
+                    </th>
+                    <th className="px-4 py-3 font-medium text-[#6b7d6a]">
                       Aksi
                     </th>
                   </tr>
@@ -651,6 +658,14 @@ function AdminPanelContent({
                             disabled={isExpiredDisabled}
                             className={`rounded-lg border px-2.5 py-1.5 text-xs transition-all focus:outline-none focus:ring-2 focus:ring-[#52b788]/30 ${isExpiredDisabled ? "bg-gray-100 border-gray-100 text-gray-300 cursor-not-allowed" : editable.subscription_expires_at ? "bg-white border-gray-200 text-gray-900" : "bg-gray-50 border-gray-100 text-gray-400"}`}
                           />
+                        </td>
+
+                        <td className="px-4 py-3">
+                          <span className="text-xs text-[#6b7d6a]">
+                            {user.last_active_at
+                              ? new Date(user.last_active_at).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" }) + " " + new Date(user.last_active_at).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })
+                              : "—"}
+                          </span>
                         </td>
 
                         <td className="px-4 py-3">

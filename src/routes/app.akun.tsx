@@ -21,6 +21,7 @@ import {
 import { cn, initials, normalizePhone, timeAgo } from "@/lib/utils";
 import { useTheme } from "@/hooks/useTheme";
 import { useLang } from "@/hooks/useLang";
+import { useSubscriptionGate } from "@/hooks/useSubscriptionGate";
 
 export const Route = createFileRoute("/app/akun")({
   head: () => ({ meta: [{ title: "Akun — Rewang" }] }),
@@ -29,6 +30,7 @@ export const Route = createFileRoute("/app/akun")({
 
 function AkunPage() {
   const { profile, family, signOut } = useAuth();
+  const limits = useSubscriptionGate();
   const navigate = useNavigate();
   const handleSignOut = async () => { await signOut(); navigate({ to: "/login" }); };
 
@@ -36,13 +38,13 @@ function AkunPage() {
     <MainLayout title="Akun">
       <ProfileSection />
 
-      <FamilySection />
+      <FamilySection limits={limits} />
 
       <EmergencyContactsSection familyId={family?.id} />
 
       <DocumentsSection familyId={family?.id} />
 
-      <WishlistShortcut familyId={family?.id} />
+      {limits.canAccessWishlist && <WishlistShortcut familyId={family?.id} />}
 
       <SettingsSection onSignOut={handleSignOut} />
 
@@ -125,7 +127,7 @@ function ProfileSection() {
 
 /* ============== FAMILY ============== */
 
-function FamilySection() {
+function FamilySection({ limits }: { limits?: { canAccessWishlist?: boolean } }) {
   const { family, profile } = useAuth();
   const qc = useQueryClient();
 
@@ -155,14 +157,16 @@ function FamilySection() {
       </div>
       <p className="text-sm text-muted-foreground mb-2">{family?.family_name}</p>
 
-      <div className="bg-gradient-to-br from-accent/40 to-secondary rounded-xl p-3 mb-4">
-        <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Kode undangan</p>
-        <div className="flex items-center gap-2">
-          <p className="font-mono text-2xl tracking-[0.3em] font-bold text-primary flex-1">{family?.invite_code ?? ""}</p>
-          <Button size="icon" variant="outline" onClick={copyCode}><Copy className="h-4 w-4" /></Button>
+      {limits?.canAccessWishlist !== false && (
+        <div className="bg-gradient-to-br from-accent/40 to-secondary rounded-xl p-3 mb-4">
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Kode undangan</p>
+          <div className="flex items-center gap-2">
+            <p className="font-mono text-2xl tracking-[0.3em] font-bold text-primary flex-1">{family?.invite_code ?? ""}</p>
+            <Button size="icon" variant="outline" onClick={copyCode}><Copy className="h-4 w-4" /></Button>
+          </div>
+          <p className="text-[11px] text-muted-foreground mt-1.5">Bagikan ke anggota keluarga untuk bergabung</p>
         </div>
-        <p className="text-[11px] text-muted-foreground mt-1.5">Bagikan ke anggota keluarga untuk bergabung</p>
-      </div>
+      )}
 
       <p className="text-xs font-semibold text-muted-foreground mb-2">Anggota ({members.length})</p>
       <div className="space-y-2">

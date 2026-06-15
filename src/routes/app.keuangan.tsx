@@ -1,8 +1,9 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { z } from "zod";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { useAuth } from "@/hooks/useAuth";
 import { useLang } from "@/hooks/useLang";
+import { useSubscriptionGate } from "@/hooks/useSubscriptionGate";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { formatRupiah, cn, daysUntil, normalizePhone } from "@/lib/utils";
@@ -10,7 +11,7 @@ import { useState, useMemo, useRef } from "react";
 import { toast } from "sonner";
 import {
   Plus, Trash2, MessageCircle, ChevronDown, FileDown, Search,
-  TrendingDown, Coins, Wallet, Banknote, Calendar, ReceiptText, CheckCircle2, BellRing,
+  TrendingDown, Coins, Wallet, Banknote, Calendar, ReceiptText, CheckCircle2, BellRing, Lock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -39,7 +40,30 @@ export const Route = createFileRoute("/app/keuangan")({
 function KeuanganPage() {
   const { profile, family } = useAuth();
   const { T } = useLang();
+  const limits = useSubscriptionGate();
   const familyId = family?.id;
+
+  if (!limits.canAccessFinance) {
+    return (
+      <MainLayout>
+        <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
+          <div className="h-16 w-16 rounded-2xl bg-muted flex items-center justify-center mb-4">
+            <Lock className="h-8 w-8 text-muted-foreground" />
+          </div>
+          <h1 className="text-xl font-bold mb-2">{T("Fitur Premium", "Premium Feature")}</h1>
+          <p className="text-sm text-muted-foreground mb-6 max-w-xs">
+            {T(
+              "Keuangan tersedia untuk paket Family. Upgrade sekarang untuk mengelola tagihan dan hutang piutang keluarga.",
+              "Finance is available for Family plan. Upgrade now to manage bills and family debts."
+            )}
+          </p>
+          <Button asChild className="rounded-xl">
+            <Link to="/aktivasi">{T("Upgrade ke Family", "Upgrade to Family")}</Link>
+          </Button>
+        </div>
+      </MainLayout>
+    );
+  }
   const qc = useQueryClient();
   const navigate = useNavigate({ from: "/app/keuangan" });
   const search = Route.useSearch();
