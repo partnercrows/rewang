@@ -9,9 +9,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { formatRupiah, cn, daysUntil, normalizePhone } from "@/lib/utils";
 import { useState, useMemo, useRef } from "react";
 import { toast } from "sonner";
+import { format as fmtDate } from "date-fns";
+import { id as idLocale } from "date-fns/locale";
 import {
   Plus, Trash2, MessageCircle, ChevronDown, FileDown, Search,
   TrendingDown, Coins, Wallet, Banknote, Calendar, ReceiptText, CheckCircle2, BellRing, Lock,
+  Users, UserPlus, FileSpreadsheet, Download, ShieldX, Check, X, Edit3, Pencil,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,11 +27,11 @@ import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useRecurringBillReset } from "@/hooks/useRecurringReset";
 
 async function tryFeedInsert(payload: Record<string, unknown>) {
-  try { await supabase.from("activity_feed").insert(payload); } catch {}
+  try { await supabase.from("activity_feed").insert(payload as any); } catch {}
 }
 
 const keuanganSearchSchema = z.object({
-  tab: z.enum(["tagihan", "hutang-piutang"]).optional().default("tagihan"),
+  tab: z.enum(["tagihan", "hutang-piutang", "kolektif"]).optional().default("tagihan"),
 });
 
 export const Route = createFileRoute("/app/keuangan")({
@@ -67,7 +70,7 @@ function KeuanganPage() {
   const qc = useQueryClient();
   const navigate = useNavigate({ from: "/app/keuangan" });
   const search = Route.useSearch();
-  const [tab, setTab] = useState<"tagihan" | "hutang-piutang">(search.tab);
+  const [tab, setTab] = useState<"tagihan" | "hutang-piutang" | "kolektif">(search.tab);
   const [view, setView] = useState<"all" | "hutang" | "piutang">("all");
   const [billDialogOpen, setBillDialogOpen] = useState(false);
   const [debtDialogOpen, setDebtDialogOpen] = useState(false);
@@ -75,6 +78,14 @@ function KeuanganPage() {
   const [confirmDeleteDebt, setConfirmDeleteDebt] = useState<any>(null);
   const [billSearch, setBillSearch] = useState("");
   const [billTypeFilter, setBillTypeFilter] = useState<string>(T("Semua"));
+  // Kolektif state
+  const [kAddOpen, setKAddOpen] = useState(false);
+  const [kDetailId, setKDetailId] = useState<string | null>(null);
+  const [kEditId, setKEditId] = useState<string | null>(null);
+  const [kDeleteConfirm, setKDeleteConfirm] = useState<any>(null);
+  const [kPesertaSearch, setKPesertaSearch] = useState("");
+  const [kolektifSearch, setKolektifSearch] = useState("");
+  const [deletePesertaConfirm, setDeletePesertaConfirm] = useState<{ id: string; nama: string; soft: boolean } | null>(null);
 
   // ---- BILLS (Tagihan) ----
   const { data: bills = [] } = useQuery({
@@ -247,6 +258,160 @@ function KeuanganPage() {
 
   const filteredDebts = view === "all" ? debts : debts.filter((d: any) => d.type === view);
 
+  // ---- KOLEKTIF ----
+  const { data: kolektifList = [] } = useQuery({
+    queryKey: ["kolektif", familyId],
+    enabled: !!familyId,
+    queryFn: async () => {
+      const { data: kegiatan, error } = await supabase
+        .from("kolektif_kegiatan")
+        .select("*, kolektif_peserta(*)")
+        .eq("family_id", familyId!)
+        .is("deleted_at", null)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return kegiatan ?? [];
+    },
+  });
+
+  const filteredKolektif = useMemo(() => {
+    if (!kolektifSearch.trim()) return kolektifList;
+    const s = kolektifSearch.toLowerCase();
+    return kolektifList.filter((kg: any) => kg.nama_kegiatan.toLowerCase().includes(s));
+  }, [kolektifList, kolektifSearch]);
+
+  const addKegiatan = useMutation({
+    mutationFn: async (v: { nama_kegiatan: string; sifat_kegiatan: string; jenis_pembayaran: string; jumlah_bayar: number | null; batas_tanggal: string | null; peserta: { nama: string; alamat?: string; no_hp?: string }[] }) => {
+      const { data: kg, error: e1 } = await supabase
+        .from("kolektif_kegiatan")
+        .insert({
+          family_id: familyId!,
+          nama_kegiatan: v.nama_kegiatan,
+          sifat_kegiatan: v.sifat_kegiatan,
+          jenis_pembayaran: v.jenis_pembayaran,
+          jumlah_bayar: v.jumlah_bayar,
+          batas_tanggal: v.batas_tanggal || null,
+          created_by: profile?.id,
+          created_by_name: profile?.full_name,
+          last_updated_by: profile?.id,
+          last_updated_by_name: profile?.full_name,
+        })
+        .select("id")
+        .single();
+      if (e1) throw e1;
+      const defaultStatus = v.jenis_pembayaran === "iuran_sukarela" ? "absen" : "belum_bayar";
+      const pesertaInserts = v.peserta.map((p) => ({
+        kegiatan_id: kg.id,
+        nama: p.nama,
+        alamat: p.alamat || null,
+        no_hp: p.no_hp || null,
+        status_bayar: defaultStatus,
+        nominal: 0,
+      }));
+      const { error: e2 } = await supabase.from("kolektif_peserta").insert(pesertaInserts);
+      if (e2) throw e2;
+    },
+    onSuccess: (_data, v) => {
+      qc.invalidateQueries({ queryKey: ["kolektif", familyId] });
+      toast.success(T("Kegiatan kolektif disimpan", "Collective activity saved"));
+      setKAddOpen(false);
+      tryFeedInsert({
+        family_id: familyId!,
+        actor_id: profile?.id,
+        actor_name: profile?.full_name ?? "",
+        action_type: "create_kolektif",
+        entity_type: "kolektif",
+        description: `membuat kegiatan kolektif "${v.nama_kegiatan}" (${v.jenis_pembayaran === "iuran_rata" ? "Iuran Rata" : "Iuran Sukarela"})`,
+      });
+    },
+  });
+
+  const updateStatusBayar = useMutation({
+    mutationFn: async ({ id, status_bayar, nominal, tanggal_bayar }: { id: string; status_bayar: string; nominal: number; tanggal_bayar: string | null }) => {
+      const { error } = await supabase
+        .from("kolektif_peserta")
+        .update({ status_bayar, nominal, tanggal_bayar, updated_at: new Date().toISOString() })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["kolektif", familyId] });
+      toast.success(T("Status diperbarui", "Status updated"));
+    },
+  });
+
+  const updatePeserta = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: any }) => {
+      const { error } = await supabase.from("kolektif_peserta").update({ ...data, updated_at: new Date().toISOString() }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["kolektif", familyId] });
+    },
+  });
+
+  const addPesertaToKegiatan = useMutation({
+    mutationFn: async ({ kegiatan_id, peserta }: { kegiatan_id: string; peserta: { nama: string; alamat?: string; no_hp?: string }[] }) => {
+      const kg = kolektifList.find((k: any) => k.id === kegiatan_id);
+      const defaultStatus = kg?.jenis_pembayaran === "iuran_sukarela" ? "absen" : "belum_bayar";
+      const inserts = peserta.map((p) => ({
+        kegiatan_id,
+        nama: p.nama,
+        alamat: p.alamat || null,
+        no_hp: p.no_hp || null,
+        status_bayar: defaultStatus,
+        nominal: 0,
+      }));
+      const { error } = await supabase.from("kolektif_peserta").insert(inserts);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["kolektif", familyId] });
+      toast.success(T("Peserta ditambahkan", "Participants added"));
+    },
+  });
+
+  const deletePeserta = useMutation({
+    mutationFn: async ({ id, soft }: { id: string; soft: boolean }) => {
+      if (soft) {
+        const { error } = await supabase.from("kolektif_peserta").update({ is_aktif: false, updated_at: new Date().toISOString() }).eq("id", id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("kolektif_peserta").delete().eq("id", id);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["kolektif", familyId] });
+      setDeletePesertaConfirm(null);
+      toast.success(T("Peserta dihapus", "Participant deleted"));
+    },
+  });
+
+  const updateKegiatan = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: any }) => {
+      const { error } = await supabase.from("kolektif_kegiatan").update({ ...data, updated_at: new Date().toISOString(), last_updated_by: profile?.id, last_updated_by_name: profile?.full_name }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["kolektif", familyId] });
+      toast.success(T("Kegiatan diperbarui", "Activity updated"));
+      setKEditId(null);
+    },
+  });
+
+  const deleteKegiatan = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("kolektif_kegiatan").update({ deleted_at: new Date().toISOString() }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["kolektif", familyId] });
+      toast.success(T("Kegiatan dihapus", "Activity deleted"));
+      setKDeleteConfirm(null);
+    },
+  });
+
   // Bill stats
   const unpaidBills = useMemo(() => bills.filter((b: any) => !b.is_paid), [bills]);
   const paidBills = useMemo(() => bills.filter((b: any) => b.is_paid), [bills]);
@@ -366,7 +531,7 @@ function KeuanganPage() {
       <h1 className="text-2xl font-bold tracking-tight mb-1">{T("Keuangan", "Finance")}</h1>
       <p className="text-sm text-muted-foreground mb-5">{T("Kelola tagihan & hutang keluarga", "Manage family bills & debts")}</p>
 
-      {/* Tab switcher — Tagihan (left), Hutang Piutang (right) */}
+      {/* Tab switcher — Tagihan | Hutang Piutang | Kolektif */}
       <div className="flex gap-2 mb-4">
         <button
           onClick={() => { setTab("tagihan"); navigate({ search: { tab: "tagihan" }, replace: true }); }}
@@ -391,6 +556,18 @@ function KeuanganPage() {
         >
           <TrendingDown className="h-4 w-4 inline mr-1" />
           {T("Hutang Piutang", "Debts & Credits")}
+        </button>
+        <button
+          onClick={() => { setTab("kolektif"); navigate({ search: { tab: "kolektif" }, replace: true }); }}
+          className={cn(
+            "flex-1 px-4 py-2.5 rounded-xl text-sm font-medium border transition-all",
+            tab === "kolektif"
+              ? "bg-primary text-primary-foreground border-primary font-extrabold scale-[1.02] shadow-md"
+              : "bg-card border-border text-muted-foreground hover:text-foreground"
+          )}
+        >
+          <Users className="h-4 w-4 inline mr-1" />
+          {T("Kolektif", "Collective")}
         </button>
       </div>
 
@@ -552,6 +729,169 @@ function KeuanganPage() {
           </Dialog>
         </>
       )}
+
+      {/* ====== KOLEKTIF TAB ====== */}
+      {tab === "kolektif" && (
+        <>
+          {/* Kolektif Search */}
+          <div className="relative mb-3">
+            <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              className="pl-9"
+              placeholder={T("Cari kegiatan...", "Search activities...")}
+              value={kolektifSearch}
+              onChange={(e) => setKolektifSearch(e.target.value)}
+            />
+          </div>
+
+          <div className="space-y-3 mb-24">
+            {filteredKolektif.length === 0 ? (
+              <div className="text-center py-12 bg-card border border-dashed border-border rounded-2xl">
+                <Users className="h-8 w-8 mx-auto text-muted-foreground/50 mb-2" />
+                <p className="text-sm text-muted-foreground">
+                  {kolektifSearch.trim()
+                    ? T("Tidak ada hasil pencarian", "No search results")
+                    : T("Belum ada kegiatan kolektif", "No collective activities yet")}
+                </p>
+              </div>
+            ) : (
+              filteredKolektif.map((kg: any) => {
+                const peserta = (kg.kolektif_peserta ?? []).filter((p: any) => p.is_aktif !== false);
+                const isRata = kg.jenis_pembayaran === "iuran_rata";
+                const totalTerkumpul = peserta.reduce((s: number, p: any) => s + Number(p.nominal), 0);
+                const lunasCount = peserta.filter((p: any) => p.status_bayar === "lunas").length;
+                const totalPeserta = isRata ? peserta.length : peserta.filter((p: any) => p.status_bayar !== "absen").length;
+                return (
+                  <KegiatanCard
+                    key={kg.id}
+                    kg={kg}
+                    onDetail={() => setKDetailId(kg.id)}
+                    onDelete={() => setKDeleteConfirm(kg)}
+                    lunasCount={lunasCount}
+                    totalPeserta={totalPeserta}
+                    totalTerkumpul={totalTerkumpul}
+                  />
+                );
+              })
+            )}
+          </div>
+
+          <Dialog open={kAddOpen} onOpenChange={setKAddOpen}>
+            <DialogTrigger asChild>
+              <Button className="fixed bottom-24 left-1/2 -translate-x-1/2 shadow-card rounded-full h-12 px-5" size="lg">
+                <Plus className="h-5 w-5 mr-1" /> {T("Kegiatan Baru", "New Activity")}
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>{T("Tambah Kegiatan Kolektif", "Add Collective Activity")}</DialogTitle>
+              </DialogHeader>
+              <AddKegiatanForm
+                onSubmit={(v) => addKegiatan.mutate(v)}
+                busy={addKegiatan.isPending}
+              />
+            </DialogContent>
+          </Dialog>
+
+          {/* Detail Kegiatan Dialog */}
+          <Dialog open={!!kDetailId} onOpenChange={(open) => { if (!open) { setKDetailId(null); setKPesertaSearch(""); } }}>
+            <DialogContent className="max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>{T("Detail Kegiatan", "Activity Detail")}</DialogTitle>
+              </DialogHeader>
+              {kDetailId && (() => {
+                const kg = kolektifList.find((k: any) => k.id === kDetailId);
+                if (!kg) return <p className="text-muted-foreground text-sm">{T("Tidak ditemukan", "Not found")}</p>;
+                const peserta = (kg.kolektif_peserta ?? []).filter((p: any) => p.is_aktif !== false);
+                const isRata = kg.jenis_pembayaran === "iuran_rata";
+                const targetNominal = kg.jumlah_bayar ?? 0;
+                const searchFilter = kPesertaSearch.toLowerCase();
+                const filtered = peserta.filter((p: any) => !kPesertaSearch || p.nama.toLowerCase().includes(searchFilter));
+                return (
+                  <DetailKegiatan
+                    kg={kg}
+                    peserta={filtered}
+                    allPeserta={peserta}
+                    isRata={isRata}
+                    targetNominal={targetNominal}
+                    onLunas={(id, nominal) => updateStatusBayar.mutate({ id, status_bayar: "lunas", nominal, tanggal_bayar: new Date().toISOString() })}
+                    onAbsen={(id) => updateStatusBayar.mutate({ id, status_bayar: "absen", nominal: 0, tanggal_bayar: null })}
+                    onEditNominal={(id, nominal) => updatePeserta.mutate({ id, data: { nominal } })}
+                    onDeletePeserta={(id, nama, soft) => setDeletePesertaConfirm({ id, nama, soft })}
+                    onAddPeserta={(pes) => addPesertaToKegiatan.mutate({ kegiatan_id: kg.id, peserta: pes })}
+                    onEditKegiatan={() => { setKDetailId(null); setKEditId(kg.id); }}
+                    kPesertaSearch={kPesertaSearch}
+                    setKPesertaSearch={setKPesertaSearch}
+                  />
+                );
+              })()}
+            </DialogContent>
+          </Dialog>
+
+          {/* Edit Kegiatan Dialog */}
+          <Dialog open={!!kEditId} onOpenChange={(open) => { if (!open) setKEditId(null); }}>
+            <DialogContent className="max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>{T("Edit Kegiatan", "Edit Activity")}</DialogTitle>
+              </DialogHeader>
+              {kEditId && (() => {
+                const kg = kolektifList.find((k: any) => k.id === kEditId);
+                if (!kg) return <p className="text-muted-foreground text-sm">{T("Tidak ditemukan", "Not found")}</p>;
+                const peserta = kg.kolektif_peserta ?? [];
+                const hasLunas = peserta.some((p: any) => p.status_bayar === "lunas");
+                return (
+                  <EditKegiatanForm
+                    kg={kg}
+                    peserta={peserta}
+                    hasLunas={hasLunas}
+                    onUpdate={(id, data) => updateKegiatan.mutate({ id, data })}
+                    onAddPeserta={(pes) => addPesertaToKegiatan.mutate({ kegiatan_id: kg.id, peserta: pes })}
+                    onDeletePeserta={(id) => deletePeserta.mutate({ id, soft: hasLunas })}
+                    busy={updateKegiatan.isPending}
+                    onCancel={() => setKEditId(null)}
+                  />
+                );
+              })()}
+            </DialogContent>
+          </Dialog>
+        </>
+      )}
+
+      {/* Confirm Delete Kegiatan */}
+      <ConfirmDialog
+        open={!!kDeleteConfirm}
+        onOpenChange={(open) => { if (!open) setKDeleteConfirm(null); }}
+        title={T("Hapus Kegiatan", "Delete Activity")}
+        description={
+          kDeleteConfirm
+            ? T(`Yakin ingin menghapus kegiatan "${kDeleteConfirm.nama_kegiatan}"? Semua data peserta akan diarsipkan.`, `Are you sure you want to delete "${kDeleteConfirm.nama_kegiatan}"? All participant data will be archived.`)
+            : ""
+        }
+        confirmLabel={T("Hapus", "Delete")}
+        variant="destructive"
+        onConfirm={() => {
+          if (kDeleteConfirm) deleteKegiatan.mutate(kDeleteConfirm.id);
+        }}
+      />
+
+      {/* Confirm Delete Peserta */}
+      <ConfirmDialog
+        open={!!deletePesertaConfirm}
+        onOpenChange={(open) => { if (!open) setDeletePesertaConfirm(null); }}
+        title={T("Hapus Peserta", "Delete Participant")}
+        description={
+          deletePesertaConfirm
+            ? T(`Yakin ingin menghapus peserta "${deletePesertaConfirm.nama}"?`, `Are you sure you want to delete "${deletePesertaConfirm.nama}"?`)
+            : ""
+        }
+        confirmLabel={T("Hapus", "Delete")}
+        variant="destructive"
+        onConfirm={() => {
+          if (deletePesertaConfirm) {
+            deletePeserta.mutate({ id: deletePesertaConfirm.id, soft: deletePesertaConfirm.soft });
+          }
+        }}
+      />
 
       {/* Confirm Delete Bill */}
       <ConfirmDialog
@@ -1284,3 +1624,264 @@ function AddDebtForm({ onSubmit, busy }: { onSubmit: (v: any) => void; busy: boo
     </form>
   );
 }
+
+/* ========== KOLEKTIF HELPERS ========== */
+
+function KegiatanCard({ kg, onDetail, onDelete, onExportPDF, lunasCount, totalPeserta, totalTerkumpul }: { kg: any; onDetail: () => void; onDelete: () => void; onExportPDF: () => void; lunasCount: number; totalPeserta: number; totalTerkumpul: number }) {
+  const { T } = useLang();
+  const isRata = kg.jenis_pembayaran === "iuran_rata";
+  const targetTotal = isRata ? (kg.jumlah_bayar ?? 0) * totalPeserta : null;
+  return (
+    <div onClick={onDetail} className="bg-card border border-border rounded-2xl p-4 shadow-soft cursor-pointer hover:border-primary/30 transition">
+      <div className="flex items-start justify-between">
+        <div className="min-w-0">
+          <h3 className="font-semibold text-sm truncate">{kg.nama_kegiatan}</h3>
+          <div className="flex items-center gap-2 mt-0.5">
+            <span className={cn("text-[10px] px-2 py-0.5 rounded-full font-medium", isRata ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" : "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400")}>{isRata ? T("Iuran Rata", "Flat Fee") : T("Iuran Sukarela", "Voluntary")}</span>
+            <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-muted text-muted-foreground capitalize">{kg.sifat_kegiatan === "rutin" ? T("Rutin", "Routine") : T("Sekali Jalan", "One-time")}</span>
+          </div>
+          {kg.last_updated_by_name && (
+            <p className="text-[10px] text-muted-foreground mt-0.5">
+              {T("Diupdate oleh")} {kg.last_updated_by_name}
+              {kg.updated_at && <span className="ml-1">· {fmtDate(new Date(kg.updated_at), "dd MMM yyyy, HH:mm", { locale: idLocale })}</span>}
+            </p>
+          )}
+        </div>
+        <div className="flex gap-0.5 shrink-0 ml-2">
+          <Button size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground hover:text-primary" onClick={(e) => { e.stopPropagation(); onExportPDF(); }} title={T("Ekspor PDF", "Export PDF")}><FileDown className="h-3.5 w-3.5" /></Button>
+          <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={(e) => { e.stopPropagation(); onDelete(); }}><Trash2 className="h-3.5 w-3.5" /></Button>
+        </div>
+      </div>
+      <div className="mt-3 flex items-end justify-between">
+        <div>
+          <p className="text-lg font-bold">{formatRupiah(totalTerkumpul)}</p>
+          <p className="text-[11px] text-muted-foreground">{lunasCount}/{totalPeserta} {T("lunas", "paid")}{isRata && targetTotal !== null && <span className="ml-1 opacity-60"> — {T("target", "target")} {formatRupiah(targetTotal)}</span>}</p>
+        </div>
+      </div>
+      <div className="w-full bg-muted h-1.5 rounded-full mt-2 overflow-hidden"><div className={cn("h-1.5 rounded-full transition-all", isRata ? "bg-blue-500" : "bg-amber-500")} style={{ width: `${totalPeserta > 0 ? Math.min(100, (lunasCount / totalPeserta) * 100) : 0}%` }} /></div>
+    </div>
+  );
+}
+
+function AddKegiatanForm({ onSubmit, busy }: { onSubmit: (v: any) => void; busy: boolean }) {
+  const { T } = useLang();
+  const [nama, setNama] = useState("");
+  const [sifat, setSifat] = useState("sekali_jalan");
+  const [jenis, setJenis] = useState("iuran_rata");
+  const [jumlah, setJumlah] = useState("");
+  const [batas, setBatas] = useState("");
+  const [pesertaInput, setPesertaInput] = useState("");
+  const [peserta, setPeserta] = useState<{ nama: string; alamat: string; no_hp: string }[]>([]);
+  const [pesertaMode, setPesertaMode] = useState<"manual" | "excel">("manual");
+  const fileRef = useRef<HTMLInputElement>(null);
+  const addPeserta = () => { const n = pesertaInput.trim(); if (!n) return; if (peserta.some(p => p.nama.toLowerCase() === n.toLowerCase())) { toast.error(T("Nama sudah ada", "Name exists")); return; } setPeserta(prev => [...prev, { nama: n, alamat: "", no_hp: "" }]); setPesertaInput(""); };
+  const removePeserta = (i: number) => setPeserta(prev => prev.filter((_, idx) => idx !== i));
+  const handleExcelImport = async (e: React.ChangeEvent<HTMLInputElement>) => { const f = e.target.files?.[0]; if (!f) return; try { const XLSX = await import("xlsx"); const data = await f.arrayBuffer(); const wb = XLSX.read(data, { type: "array" }); const ws = wb.Sheets[wb.SheetNames[0]]; const rows = XLSX.utils.sheet_to_json<any>(ws, { header: 1 }); const hdr = rows[0] as string[]; const ni = hdr.findIndex((h: string) => h?.toLowerCase().includes("nama")); const ai = hdr.findIndex((h: string) => h?.toLowerCase().includes("alamat")); const hi = hdr.findIndex((h: string) => h?.toLowerCase().includes("hp") || h?.toLowerCase().includes("telepon") || h?.toLowerCase().includes("no")); if (ni === -1) { toast.error(T("Kolom 'Nama' tidak ditemukan", "Column 'Nama' not found")); return; } const imported = rows.slice(1).filter((r: any) => r[ni]?.toString().trim()).map((r: any) => ({ nama: r[ni]?.toString().trim() ?? "", alamat: ai >= 0 ? (r[ai]?.toString().trim() ?? "") : "", no_hp: hi >= 0 ? (r[hi]?.toString().trim() ?? "") : "" })); setPeserta(prev => { const existing = new Set(prev.map(p => p.nama.toLowerCase())); const uniq = [...prev]; for (const imp of imported) { if (!existing.has(imp.nama.toLowerCase())) { uniq.push(imp); existing.add(imp.nama.toLowerCase()); } } return uniq; }); toast.success(T(`${imported.length} peserta diimpor`, `${imported.length} imported`)); } catch { toast.error(T("Gagal baca Excel", "Failed to read Excel")); } if (fileRef.current) fileRef.current.value = ""; };
+  const downloadTemplate = async () => { try { const XLSX = await import("xlsx"); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([["Nama", "Alamat", "No HP"]]), "Peserta"); XLSX.writeFile(wb, "template_peserta_kolektif.xlsx"); } catch { toast.error(T("Gagal unduh template", "Download failed")); } };
+  const previewText = jenis === "iuran_sukarela" ? T("Default: Absen / Tidak Ikut", "Default: Absent") : T("Default: Belum Bayar", "Default: Unpaid");
+  return (
+    <form onSubmit={e => { e.preventDefault(); if (peserta.length === 0) { toast.error(T("Minimal 1 peserta", "At least 1 participant")); return; } onSubmit({ nama_kegiatan: nama, sifat_kegiatan: sifat, jenis_pembayaran: jenis, jumlah_bayar: jenis === "iuran_rata" ? Number(jumlah) || 0 : null, batas_tanggal: batas || null, peserta }); }} className="space-y-3">
+      <div><Label>{T("Nama Kegiatan", "Activity Name")}</Label><Input required value={nama} onChange={e => setNama(e.target.value)} placeholder={T("Contoh: Kas Lebaran 2026", "e.g. Eid Fund 2026")} /></div>
+      <div><Label>{T("Sifat Kegiatan", "Activity Nature")}</Label><div className="flex gap-2 mt-1">{[{ key: "sekali_jalan", label: T("Sekali Jalan", "One-time") }, { key: "rutin", label: T("Rutin", "Routine") }].map(opt => (<button key={opt.key} type="button" onClick={() => setSifat(opt.key)} className={cn("flex-1 px-3 py-2.5 rounded-xl border text-sm font-medium transition", sifat === opt.key ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border text-muted-foreground")}>{opt.label}</button>))}</div></div>
+      <div><Label>{T("Jenis Pembayaran", "Payment Type")}</Label><div className="flex gap-2 mt-1">{[{ key: "iuran_rata", label: T("Iuran Rata", "Flat Fee") }, { key: "iuran_sukarela", label: T("Iuran Sukarela", "Voluntary") }].map(opt => (<button key={opt.key} type="button" onClick={() => setJenis(opt.key)} className={cn("flex-1 px-3 py-2.5 rounded-xl border text-sm font-medium transition", jenis === opt.key ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border text-muted-foreground")}>{opt.label}</button>))}</div></div>
+      {jenis === "iuran_rata" && <div><Label>{T("Jumlah Bayar (Rp)", "Amount (Rp)")}</Label><Input required type="number" min={0} value={jumlah} onChange={e => setJumlah(e.target.value)} placeholder="50000" /></div>}
+      <div><Label>{T("Batas Tanggal", "Due Date")} ({T("opsional", "optional")})</Label><Input type="date" value={batas} onChange={e => setBatas(e.target.value)} /></div>
+      <div className="bg-muted/50 rounded-xl p-3 text-xs text-muted-foreground"><span className="font-medium">{T("Preview Status:", "Status Preview:")}</span> {previewText}</div>
+      <div className="border-t pt-3"><Label className="mb-2 block">{T("Tambah Peserta", "Add Participants")}</Label>
+        <div className="flex gap-2 mb-2"><button type="button" onClick={() => setPesertaMode("manual")} className={cn("flex-1 py-1.5 text-xs rounded-lg border transition", pesertaMode === "manual" ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border text-muted-foreground")}><UserPlus className="h-3.5 w-3.5 inline mr-1" />{T("Manual", "Manual")}</button><button type="button" onClick={() => setPesertaMode("excel")} className={cn("flex-1 py-1.5 text-xs rounded-lg border transition", pesertaMode === "excel" ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border text-muted-foreground")}><FileSpreadsheet className="h-3.5 w-3.5 inline mr-1" />Excel</button></div>
+        {pesertaMode === "manual" ? (<div className="flex gap-2"><Input value={pesertaInput} onChange={e => setPesertaInput(e.target.value)} placeholder={T("Ketik nama...", "Type name...")} onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addPeserta(); } }} /><Button type="button" size="sm" onClick={addPeserta}><Plus className="h-4 w-4" /></Button></div>) : (<div className="space-y-2"><Button type="button" variant="outline" size="sm" className="w-full" onClick={() => fileRef.current?.click()}><Download className="h-4 w-4 mr-1" />{T("Import Excel", "Import Excel")}</Button><input ref={fileRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={handleExcelImport} /><Button type="button" variant="ghost" size="sm" className="w-full" onClick={downloadTemplate}><FileDown className="h-4 w-4 mr-1" />{T("Unduh Template .xlsx", "Download Template .xlsx")}</Button></div>)}
+        {peserta.length > 0 && (<div className="mt-2 space-y-1 max-h-32 overflow-y-auto">{peserta.map((p, i) => (<div key={i} className="flex items-center justify-between bg-muted/40 rounded-lg px-3 py-1.5 text-xs"><span>{p.nama}</span><Button size="icon" variant="ghost" className="h-6 w-6 text-muted-foreground hover:text-destructive" type="button" onClick={() => removePeserta(i)}><X className="h-3 w-3" /></Button></div>))}</div>)}
+        <p className="text-[11px] text-muted-foreground mt-1">{peserta.length} {T("peserta", "participants")}</p>
+      </div>
+      <Button type="submit" className="w-full" disabled={busy || !nama.trim() || peserta.length === 0}>{T("Simpan Kegiatan", "Save Activity")}</Button>
+    </form>
+  );
+}
+
+function DetailKegiatan({ kg, peserta: ps, allPeserta, isRata, targetNominal, onLunas, onAbsen, onEditNominal, onDeletePeserta, onAddPeserta, onEditKegiatan, kPesertaSearch, setKPesertaSearch }: { kg: any; peserta: any[]; allPeserta: any[]; isRata: boolean; targetNominal: number; onLunas: (id: string, nominal: number) => void; onAbsen: (id: string) => void; onEditNominal: (id: string, nominal: number) => void; onDeletePeserta: (id: string, nama: string, soft: boolean) => void; onAddPeserta: (pes: { nama: string; alamat?: string; no_hp?: string }[]) => void; onEditKegiatan: () => void; kPesertaSearch: string; setKPesertaSearch: (v: string) => void }) {
+  const { T } = useLang();
+  const [editNomId, setEditNomId] = useState<string | null>(null);
+  const [editNomVal, setEditNomVal] = useState("");
+  const [addPesInput, setAddPesInput] = useState("");
+  const [showAddPes, setShowAddPes] = useState(false);
+  const [sukarelaBayarId, setSukarelaBayarId] = useState<string | null>(null);
+  const [sukarelaNominal, setSukarelaNominal] = useState("");
+  const waText = (p: any) => encodeURIComponent(`Assalamualaikum Wr. Wb. / Halo Bapak/Ibu ${p.nama}, mengingatkan untuk partisipasi agenda ${kg.nama_kegiatan} saat ini belum tercatat di rekap kami. Pembayaran bisa diserahkan ke pengurus atau via transfer ya. Terima kasih banyak atas dukungannya, Jazakumullah Khayra / Terima kasih banyak 🙏`);
+  const totalTerkumpul = ps.reduce((s: number, p: any) => s + Number(p.nominal), 0);
+  // Use allPeserta (unfiltered) for counter values
+  const lc = allPeserta.filter((p: any) => p.status_bayar === "lunas").length;
+  const bc = allPeserta.filter((p: any) => p.status_bayar === "belum_bayar").length;
+  const ac = allPeserta.filter((p: any) => p.status_bayar === "absen").length;
+  // Export PDF for this activity
+  const handleExportPDF = () => {
+    exportKolektifPDF(kg, allPeserta, isRata, targetNominal, allPeserta.reduce((s: number, p: any) => s + Number(p.nominal), 0), T);
+  };
+  return (
+    <div className="space-y-3">
+      <div className="bg-muted/30 rounded-xl p-3 space-y-1">
+        <div className="flex items-center justify-between">
+          <h3 className="font-bold">{kg.nama_kegiatan}</h3>
+          <div className="flex gap-1">
+            <Button size="sm" variant="outline" onClick={handleExportPDF} title={T("Ekspor PDF", "Export PDF")}><FileDown className="h-3.5 w-3.5 mr-1" />PDF</Button>
+            <Button size="sm" variant="outline" onClick={onEditKegiatan}><Edit3 className="h-3.5 w-3.5 mr-1" />{T("Edit", "Edit")}</Button>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <span className={cn("px-2 py-0.5 rounded-full font-medium", isRata ? "bg-blue-100 text-blue-700" : "bg-amber-100 text-amber-700")}>
+            {isRata ? `${T("Iuran Rata", "Flat Fee")}: ${formatRupiah(targetNominal)}` : T("Iuran Sukarela", "Voluntary")}
+          </span>
+          <span className="px-2 py-0.5 rounded-full bg-muted">{kg.sifat_kegiatan === "rutin" ? T("Rutin", "Routine") : T("Sekali Jalan", "One-time")}</span>
+        </div>
+        <div className="flex gap-3 text-xs">
+          <span className="text-emerald-600 font-medium">\u2713 {lc} {T("Lunas", "Paid")}</span>
+          <span className="text-destructive font-medium">\u23F3 {bc} {T("Belum", "Unpaid")}</span>
+          <span className="text-muted-foreground">🚫 {ac} {T("Absen", "Absent")}</span>
+        </div>
+        <p className="text-lg font-bold">{formatRupiah(totalTerkumpul)}</p>
+        {kg.batas_tanggal && <p className="text-[11px] text-muted-foreground">{T("Batas", "Due")}: {new Date(kg.batas_tanggal).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}</p>}
+        {kg.last_updated_by_name && (
+          <p className="text-[10px] text-muted-foreground">
+            {T("Diupdate oleh")} {kg.last_updated_by_name}
+            {kg.updated_at && <span className="ml-1">· {fmtDate(new Date(kg.updated_at), "dd MMM yyyy, HH:mm", { locale: idLocale })}</span>}
+          </p>
+        )}
+      </div>
+      <div className="flex gap-2">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input className="pl-9" placeholder={T("Cari nama peserta...", "Search name...")} value={kPesertaSearch} onChange={e => setKPesertaSearch(e.target.value)} />
+        </div>
+        <Button size="icon" variant="outline" onClick={() => setShowAddPes(!showAddPes)}><UserPlus className="h-4 w-4" /></Button>
+      </div>
+      {showAddPes && (
+        <div className="flex gap-2">
+          <Input value={addPesInput} onChange={e => setAddPesInput(e.target.value)} placeholder={T("Nama peserta baru", "New name")} onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); if (addPesInput.trim()) { onAddPeserta([{ nama: addPesInput.trim() }]); setAddPesInput(""); } } }} />
+          <Button size="sm" onClick={() => { if (addPesInput.trim()) { onAddPeserta([{ nama: addPesInput.trim() }]); setAddPesInput(""); } }}>{T("Tambah", "Add")}</Button>
+        </div>
+      )}
+      <div className="space-y-1.5 max-h-[50vh] overflow-y-auto">
+        {ps.length === 0 && <p className="text-center text-muted-foreground text-sm py-4">{T("Tidak ada peserta", "No participants")}</p>}
+        {ps.map((p: any) => {
+          const isLunas = p.status_bayar === "lunas";
+          const isAbsen = p.status_bayar === "absen";
+          const pNoHp = p.no_hp ?? "";
+          return (
+            <div key={p.id} className={cn("flex items-center justify-between rounded-xl px-3 py-2.5 border", isLunas ? "bg-emerald-50/50 border-emerald-200 dark:bg-emerald-950/10 dark:border-emerald-800" : isAbsen ? "bg-muted/30 border-muted" : "bg-card border-border")}>
+              <div className="min-w-0">
+                <p className="text-sm font-medium truncate">{p.nama}</p>
+                <p className="text-xs text-muted-foreground">
+                  {isLunas ? (
+                    <span className="text-emerald-600 dark:text-emerald-400 font-medium">
+                      {formatRupiah(p.nominal)} {p.tanggal_bayar ? "\u00B7 " + new Date(p.tanggal_bayar).toLocaleDateString("id-ID", { day: "numeric", month: "short" }) : ""}
+                    </span>
+                  ) : isAbsen ? (
+                    <span className="text-muted-foreground">{T("Absen / Tidak Ikut", "Absent")}</span>
+                  ) : (
+                    <span className="text-destructive">{T("Belum Bayar", "Unpaid")}</span>
+                  )}
+                </p>
+              </div>
+              <div className="flex items-center gap-1 shrink-0 ml-2">
+                {!isLunas && !isAbsen && (
+                  <>
+                    {!isRata ? (
+                      <Button size="sm" variant="outline" className="h-7 text-xs text-emerald-600 border-emerald-300 hover:bg-emerald-50" onClick={() => { setSukarelaBayarId(p.id); setSukarelaNominal(""); }}>
+                        <Check className="h-3 w-3 mr-0.5" />{T("Bayar", "Pay")}
+                      </Button>
+                    ) : (
+                      <Button size="sm" variant="outline" className="h-7 text-xs text-emerald-600 border-emerald-300 hover:bg-emerald-50" onClick={() => onLunas(p.id, targetNominal)}>
+                        <Check className="h-3 w-3 mr-0.5" />{T("Lunas", "Paid")}
+                      </Button>
+                    )}
+                    {pNoHp && (
+                      <Button size="icon" variant="ghost" className="h-7 w-7 text-green-600" asChild>
+                        <a href={`https://wa.me/${normalizePhone(pNoHp)}?text=${waText(p)}`} target="_blank" rel="noreferrer"><MessageCircle className="h-3.5 w-3.5" /></a>
+                      </Button>
+                    )}
+                    <Button size="icon" variant="ghost" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => onAbsen(p.id)}><ShieldX className="h-3.5 w-3.5" /></Button>
+                  </>
+                )}
+                {isLunas && (
+                  <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => { setEditNomId(p.id); setEditNomVal(String(p.nominal)); }}><Pencil className="h-3.5 w-3.5" /></Button>
+                )}
+                <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => onDeletePeserta(p.id, p.nama, isLunas)}><Trash2 className="h-3.5 w-3.5" /></Button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      {/* Edit Nominal Dialog */}
+      <Dialog open={!!editNomId} onOpenChange={(open) => { if (!open) { setEditNomId(null); setEditNomVal(""); } }}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>{T("Edit Nominal", "Edit Amount")}</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <div><Label>{T("Nominal (Rp)", "Amount (Rp)")}</Label><Input type="number" min={0} value={editNomVal} onChange={e => setEditNomVal(e.target.value)} /></div>
+            <Button className="w-full" onClick={() => { if (editNomId && Number(editNomVal) > 0) { onEditNominal(editNomId, Number(editNomVal)); setEditNomId(null); setEditNomVal(""); } }}>{T("Simpan", "Save")}</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+      {/* Sukarela Bayar Dialog */}
+      <Dialog open={!!sukarelaBayarId} onOpenChange={(open) => { if (!open) { setSukarelaBayarId(null); setSukarelaNominal(""); } }}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>{T("Jumlah Bayar", "Payment Amount")}</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <div><Label>{T("Nominal (Rp)", "Amount (Rp)")}</Label><Input type="number" min={0} value={sukarelaNominal} onChange={e => setSukarelaNominal(e.target.value)} placeholder="10000" /></div>
+            <div className="flex gap-2 flex-wrap">
+              {[10000, 20000, 50000, 100000, 200000].map(n => (
+                <Button key={n} size="sm" variant="outline" onClick={() => setSukarelaNominal(String(n))}>{formatRupiah(n)}</Button>
+              ))}
+            </div>
+            <Button className="w-full" disabled={!sukarelaNominal || Number(sukarelaNominal) <= 0} onClick={() => { if (sukarelaBayarId && Number(sukarelaNominal) > 0) { onLunas(sukarelaBayarId, Number(sukarelaNominal)); setSukarelaBayarId(null); setSukarelaNominal(""); } }}>{T("Simpan Pembayaran", "Save Payment")}</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+function EditKegiatanForm({ kg, peserta: ps, hasLunas, onUpdate, onAddPeserta, onDeletePeserta, busy, onCancel }: { kg: any; peserta: any[]; hasLunas: boolean; onUpdate: (id: string, data: any) => void; onAddPeserta: (pes: { nama: string; alamat?: string; no_hp?: string }[]) => void; onDeletePeserta: (id: string) => void; busy: boolean; onCancel: () => void }) {
+  const { T } = useLang();
+  const [nama, setNama] = useState(kg.nama_kegiatan);
+  const [batas, setBatas] = useState(kg.batas_tanggal ?? "");
+  const [addPesInput, setAddPesInput] = useState("");
+  const aktip = ps.filter((p: any) => p.is_aktif !== false);
+  return (
+    <div className="space-y-3">
+      <div><Label>{T("Jenis Pembayaran", "Payment Type")}</Label><Input disabled value={kg.jenis_pembayaran === "iuran_rata" ? T("Iuran Rata", "Flat Fee") : T("Iuran Sukarela", "Voluntary")} className="bg-muted" />{hasLunas && <p className="text-[11px] text-amber-600 mt-1">{T("Terkunci karena sudah ada pembayaran", "Locked: payments exist")}</p>}</div>
+      {kg.jenis_pembayaran === "iuran_rata" && <div><Label>{T("Jumlah Bayar (Rp)", "Amount (Rp)")}</Label><Input disabled value={String(kg.jumlah_bayar ?? 0)} className="bg-muted" />{hasLunas && <p className="text-[11px] text-amber-600 mt-1">{T("Terkunci karena sudah ada pembayaran", "Locked: payments exist")}</p>}</div>}
+      <div><Label>{T("Nama Kegiatan", "Activity Name")}</Label><Input value={nama} onChange={e => setNama(e.target.value)} /></div>
+      <div><Label>{T("Batas Tanggal", "Due Date")}</Label><Input type="date" value={batas} onChange={e => setBatas(e.target.value)} /></div>
+      <div className="border-t pt-3"><Label className="mb-2 block">{T("Tambah Peserta", "Add Participant")}</Label><div className="flex gap-2"><Input value={addPesInput} onChange={e => setAddPesInput(e.target.value)} placeholder={T("Ketik nama...", "Type name...")} onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); if (addPesInput.trim()) { onAddPeserta([{ nama: addPesInput.trim() }]); setAddPesInput(""); } } }} /><Button size="sm" onClick={() => { if (addPesInput.trim()) { onAddPeserta([{ nama: addPesInput.trim() }]); setAddPesInput(""); } }}><Plus className="h-4 w-4" /></Button></div></div>
+      <div className="space-y-1 max-h-40 overflow-y-auto"><Label>{T("Daftar Peserta Aktif", "Active")} ({aktip.length})</Label>{aktip.map((p: any) => (<div key={p.id} className="flex items-center justify-between bg-muted/40 rounded-lg px-3 py-1.5 text-xs"><span>{p.nama} {p.status_bayar === "lunas" ? "\u2713" : p.status_bayar === "absen" ? "🚫" : "\u23F3"}</span><Button size="icon" variant="ghost" className="h-6 w-6 text-muted-foreground hover:text-destructive" onClick={() => onDeletePeserta(p.id)}><X className="h-3 w-3" /></Button></div>))}</div>
+      <div className="flex gap-2"><Button variant="outline" className="flex-1" onClick={onCancel}>{T("Batal", "Cancel")}</Button><Button className="flex-1" disabled={busy || !nama.trim()} onClick={() => onUpdate(kg.id, { nama_kegiatan: nama, batas_tanggal: batas || null })}>{T("Perbarui", "Update")}</Button></div>
+    </div>
+  );
+}
+
+async function exportKolektifPDF(kg: any, peserta: any[], isRata: boolean, targetNominal: number, totalTerkumpul: number, T: (k: string, d?: string) => string) {
+  try {
+    const [{ jsPDF }, { default: autoTable }] = await Promise.all([import("jspdf"), import("jspdf-autotable")]);
+    const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+    const pageW = doc.internal.pageSize.getWidth();
+    doc.setFillColor(0x17, 0x83, 0x7e); doc.rect(0, 0, pageW, 22, "F");
+    doc.setTextColor(255, 255, 255); doc.setFont("helvetica", "bold"); doc.setFontSize(14);
+    doc.text("Rewang \u2014 Rekap Kolektif", 14, 14);
+    let y = 28; doc.setTextColor(80, 80, 80); doc.setFontSize(8); doc.setFont("helvetica", "normal");
+    doc.text(`Dicetak: ${new Date().toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}`, 14, y); y += 5;
+    doc.text(`Kegiatan: ${kg.nama_kegiatan}`, 14, y); y += 4;
+    doc.text(`Jenis: ${isRata ? `${T("Iuran Rata", "Flat Fee")} - ${formatRupiah(targetNominal)}` : T("Iuran Sukarela", "Voluntary")}`, 14, y); y += 4;
+    doc.text(`Total Terkumpul: ${formatRupiah(totalTerkumpul)}`, 14, y); y += 4;
+    const lc = peserta.filter((p: any) => p.status_bayar === "lunas").length;
+    const ac = peserta.filter((p: any) => p.status_bayar === "absen").length;
+    const bc = peserta.filter((p: any) => p.status_bayar === "belum_bayar").length;
+    doc.text(`Status: ${lc} Lunas \u00b7 ${bc} Belum \u00b7 ${ac} Absen`, 14, y); y += 6;
+    autoTable(doc, { startY: y, head: [["Nama", "Status", "Nominal", "Tanggal Bayar"]], body: peserta.map((p: any) => [p.nama, p.status_bayar === "lunas" ? "Lunas" : p.status_bayar === "absen" ? "Absen / Tidak Ikut" : "Belum Bayar", formatRupiah(p.nominal), p.tanggal_bayar ? new Date(p.tanggal_bayar).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" }) : "-"]), theme: "grid", headStyles: { fillColor: [0x17, 0x83, 0x7e], textColor: [255, 255, 255], fontStyle: "bold", fontSize: 8 }, bodyStyles: { fontSize: 8, textColor: [50, 50, 50] }, alternateRowStyles: { fillColor: [0xfc, 0xfd, 0xfe] }, margin: { left: 14, right: 14 } });
+    doc.setTextColor(170, 170, 170); doc.setFontSize(7);
+    doc.text("Generated by Rewang \u2014 Family Household Management System", pageW / 2, doc.internal.pageSize.getHeight() - 10, { align: "center" });
+    const blob = doc.output("blob"); const url = URL.createObjectURL(blob); const a = document.createElement("a");
+    a.href = url; a.download = `rekap_kolektif_${kg.nama_kegiatan.replace(/[^a-z0-9]/gi, "_").toLowerCase()}.pdf`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+    toast.success(T("PDF terunduh", "PDF downloaded"));
+  } catch (e: any) { toast.error(T("Gagal unduh PDF", "Failed to download PDF") + ": " + (e?.message ?? "")); }
+}
+

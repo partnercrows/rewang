@@ -575,6 +575,129 @@ export type Database = {
           },
         ]
       }
+      kolektif_kegiatan: {
+        Row: {
+          batas_tanggal: string | null
+          created_at: string | null
+          created_by: string | null
+          created_by_name: string | null
+          deleted_at: string | null
+          family_id: string
+          id: string
+          jenis_pembayaran: string
+          jumlah_bayar: number | null
+          last_updated_by: string | null
+          last_updated_by_name: string | null
+          nama_kegiatan: string
+          sifat_kegiatan: string
+          updated_at: string | null
+        }
+        Insert: {
+          batas_tanggal?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          created_by_name?: string | null
+          deleted_at?: string | null
+          family_id: string
+          id?: string
+          jenis_pembayaran?: string
+          jumlah_bayar?: number | null
+          last_updated_by?: string | null
+          last_updated_by_name?: string | null
+          nama_kegiatan: string
+          sifat_kegiatan?: string
+          updated_at?: string | null
+        }
+        Update: {
+          batas_tanggal?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          created_by_name?: string | null
+          deleted_at?: string | null
+          family_id?: string
+          id?: string
+          jenis_pembayaran?: string
+          jumlah_bayar?: number | null
+          last_updated_by?: string | null
+          last_updated_by_name?: string | null
+          nama_kegiatan?: string
+          sifat_kegiatan?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kolektif_kegiatan_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kolektif_kegiatan_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kolektif_kegiatan_last_updated_by_fkey"
+            columns: ["last_updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      kolektif_peserta: {
+        Row: {
+          alamat: string | null
+          created_at: string | null
+          id: string
+          is_aktif: boolean | null
+          kegiatan_id: string
+          nama: string
+          no_hp: string | null
+          nominal: number | null
+          status_bayar: string
+          tanggal_bayar: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          alamat?: string | null
+          created_at?: string | null
+          id?: string
+          is_aktif?: boolean | null
+          kegiatan_id: string
+          nama: string
+          no_hp?: string | null
+          nominal?: number | null
+          status_bayar?: string
+          tanggal_bayar?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          alamat?: string | null
+          created_at?: string | null
+          id?: string
+          is_aktif?: boolean | null
+          kegiatan_id?: string
+          nama?: string
+          no_hp?: string | null
+          nominal?: number | null
+          status_bayar?: string
+          tanggal_bayar?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kolektif_peserta_kegiatan_id_fkey"
+            columns: ["kegiatan_id"]
+            isOneToOne: false
+            referencedRelation: "kolektif_kegiatan"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -634,63 +757,6 @@ export type Database = {
           },
         ]
       }
-      recipes: {
-        Row: {
-          category: string
-          created_at: string
-          created_by: string | null
-          created_by_name: string | null
-          deleted_at: string | null
-          description: string | null
-          family_id: string
-          id: string
-          image_url: string | null
-          title: string
-          updated_at: string
-        }
-        Insert: {
-          category?: string
-          created_at?: string
-          created_by?: string | null
-          created_by_name?: string | null
-          deleted_at?: string | null
-          description?: string | null
-          family_id: string
-          id?: string
-          image_url?: string | null
-          title: string
-          updated_at?: string
-        }
-        Update: {
-          category?: string
-          created_at?: string
-          created_by?: string | null
-          created_by_name?: string | null
-          deleted_at?: string | null
-          description?: string | null
-          family_id?: string
-          id?: string
-          image_url?: string | null
-          title?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "recipes_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "recipes_family_id_fkey"
-            columns: ["family_id"]
-            isOneToOne: false
-            referencedRelation: "families"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       quick_notes: {
         Row: {
           content: string
@@ -726,6 +792,101 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      recipe_categories: {
+        Row: {
+          created_at: string | null
+          deleted_at: string | null
+          family_id: string
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string | null
+          deleted_at?: string | null
+          family_id: string
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string | null
+          deleted_at?: string | null
+          family_id?: string
+          id?: string
+          name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recipe_categories_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recipes: {
+        Row: {
+          category: string
+          created_at: string | null
+          created_by: string | null
+          created_by_name: string | null
+          deleted_at: string | null
+          description: string | null
+          family_id: string
+          id: string
+          image_url: string | null
+          last_updated_by: string | null
+          last_updated_by_name: string | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          category?: string
+          created_at?: string | null
+          created_by?: string | null
+          created_by_name?: string | null
+          deleted_at?: string | null
+          description?: string | null
+          family_id: string
+          id?: string
+          image_url?: string | null
+          last_updated_by?: string | null
+          last_updated_by_name?: string | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          category?: string
+          created_at?: string | null
+          created_by?: string | null
+          created_by_name?: string | null
+          deleted_at?: string | null
+          description?: string | null
+          family_id?: string
+          id?: string
+          image_url?: string | null
+          last_updated_by?: string | null
+          last_updated_by_name?: string | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recipes_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recipes_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       shopping_categories: {
         Row: {
@@ -898,19 +1059,29 @@ export type Database = {
       ensure_profile: {
         Args: never
         Returns: {
-          id: string
-          email: string
-          full_name: string
           avatar_url: string | null
-          phone_number: string | null
-          family_id: string | null
-          role: string
           created_at: string
-          updated_at: string
           deleted_at: string | null
+          email: string
+          family_id: string | null
+          full_name: string
+          id: string
+          is_active: boolean
           last_active_at: string | null
+          phone_number: string | null
+          role: string
+          subscription_expires_at: string | null
+          subscription_tier: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "profiles"
+          isOneToOne: true
+          isSetofReturn: false
         }
       }
+      is_admin: { Args: never; Returns: boolean }
       join_family_by_code: {
         Args: { _invite_code: string }
         Returns: {

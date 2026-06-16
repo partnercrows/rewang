@@ -2,7 +2,8 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { useAuth } from "@/hooks/useAuth";
 import { useLang } from "@/hooks/useLang";
-import { useMutation, useQueryClient, useInfiniteQuery } from "@tanstack/react-query";
+import { useSubscriptionGate } from "@/hooks/useSubscriptionGate";
+import { useMutation, useQueryClient, useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -59,6 +60,23 @@ function ResepListPage() {
   const [formImageUrl, setFormImageUrl] = useState("");
   const [formCategory, setFormCategory] = useState(DEFAULT_CATEGORIES[0]);
 
+  const limits = useSubscriptionGate();
+
+  const { data: recipeCount, isLoading: countLoading } = useQuery({
+    queryKey: ["recipes", familyId, "count"],
+    enabled: !!familyId,
+    staleTime: 0,
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("recipes")
+        .select("*", { count: "exact", head: true })
+        .eq("family_id", familyId!)
+        .is("deleted_at", null);
+      if (error) throw error;
+      return count ?? 0;
+    },
+  });
+
   const {
     data,
     fetchNextPage,
@@ -102,6 +120,23 @@ function ResepListPage() {
 
   const upsertMutation = useMutation({
     mutationFn: async () => {
+      // Safety net: cek limit lagi sebelum insert berdasarkan tier
+      if (!editData?.id) {
+        if (limits.tier === "none" || !limits.isActive) {
+          throw new Error(T("Anda belum berlangganan. Upgrade untuk menambah resep."));
+        }
+        if (limits.tier === "starter") {
+          const { count: currentCount, error: countErr } = await supabase
+            .from("recipes")
+            .select("*", { count: "exact", head: true })
+            .eq("family_id", familyId!)
+            .is("deleted_at", null);
+          if (countErr) throw countErr;
+          if ((currentCount ?? 0) >= limits.maxFavoriteRecipes) {
+            throw new Error(T("Batas 10 resep tercapai. Upgrade ke Family untuk resep tak terbatas."));
+          }
+        }
+      }
       const payload: any = {
         family_id: familyId!,
         title: formTitle.trim(),
@@ -124,6 +159,7 @@ function ResepListPage() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["recipes", familyId] });
+      qc.invalidateQueries({ queryKey: ["recipes", familyId, "count"] });
       toast.success(T("Tersimpan"));
       setOpen(false);
       setEditData(null);
@@ -145,7 +181,21 @@ function ResepListPage() {
 
   const categoryChips = [T("Semua"), ...DEFAULT_CATEGORIES];
 
+  const isAtLimit = limits.tier === "starter" && (recipeCount ?? 0) >= limits.maxFavoriteRecipes;
+
   const openAdd = () => {
+    if (limits.tier === "none" || !limits.isActive) {
+      toast.error(T("Anda belum berlangganan. Upgrade untuk menambah resep."));
+      return;
+    }
+    if (countLoading) {
+      toast.error(T("Memuat data..."));
+      return;
+    }
+    if (isAtLimit) {
+      toast.error(T("Batas 10 resep tercapai. Upgrade ke Family untuk resep tak terbatas."));
+      return;
+    }
     setEditData(null);
     setFormTitle("");
     setFormDescription("");
@@ -179,7 +229,7 @@ function ResepListPage() {
             <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input className="pl-9" placeholder={T("Cari resep...")} value={searchInput} onChange={(e) => setSearchInput(e.target.value)} />
           </div>
-          <Button size="icon" onClick={openAdd} className="shrink-0">
+          <Button size="icon" onClick={openAdd} className="shrink-0" disabled={limits.tier === "none" || !limits.isActive || countLoading || isAtLimit}>
             <Plus className="h-4 w-4" />
           </Button>
         </div>
