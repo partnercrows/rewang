@@ -89,14 +89,14 @@ function AktivasiPage() {
     return <Navigate to="/" replace />;
   }
 
-  if (profile?.is_active && profile?.subscription_tier !== "none") {
-    return <Navigate to="/app" replace />;
-  }
-
   const tier = (profile?.subscription_tier as string) || "none";
   const expiresAt = profile?.subscription_expires_at;
   // Expired at end of day, not start of day
   const isExpired = expiresAt ? new Date() >= new Date(new Date(expiresAt).getFullYear(), new Date(expiresAt).getMonth(), new Date(expiresAt).getDate() + 1) : false;
+
+  if (profile?.is_active && profile?.subscription_tier !== "none" && !isExpired) {
+    return <Navigate to="/app" replace />;
+  }
 
   let statusBadge: {
     icon: React.ReactNode;
