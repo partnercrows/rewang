@@ -5,13 +5,14 @@ import { useLang } from "@/hooks/useLang";
 import { useSubscriptionGate } from "@/hooks/useSubscriptionGate";
 import { useMutation, useQueryClient, useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import imageCompression from "browser-image-compression";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Search, ChevronLeft } from "lucide-react";
+import { Plus, Search, ChevronLeft, Upload, X } from "lucide-react";
 import { useState, useMemo, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -24,6 +25,48 @@ const DEFAULT_CATEGORIES = ["Sarapan", "Makan Siang", "Makan Malam", "Kue", "Min
 
 async function tryFeedInsert(payload: Record<string, unknown>) {
   try { await supabase.from("activity_feed").insert(payload as any); } catch { /* ignore */ }
+}
+
+async function compressImage(file: File): Promise<File> {
+  const options = {
+    maxSizeMB: 0.2,
+    maxWidthOrHeight: 800,
+    useWebWorker: true,
+    fileType: file.type || "image/jpeg",
+  };
+  try {
+    return await imageCompression(file, options);
+  } catch {
+    // fallback: return original file if compression fails
+    return file;
+  }
+}
+
+async function uploadRecipeImage(familyId: string, recipeId: string, file: File): Promise<string> {
+  const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
+  const path = `${familyId}/${recipeId}-${Date.now()}.${ext}`;
+
+  const { error: upErr } = await supabase.storage
+    .from("recipe-images")
+    .upload(path, file, { upsert: true, contentType: file.type || "image/jpeg" });
+  if (upErr) throw upErr;
+
+  const { data } = supabase.storage.from("recipe-images").getPublicUrl(path);
+  return data.publicUrl;
+}
+
+async function deleteOldRecipeImage(imageUrl: string | null) {
+  if (!imageUrl) return;
+  try {
+    // Extract path from public URL: https://xxx.supabase.co/storage/v1/object/public/recipe-images/familyId/file.jpg
+    const url = new URL(imageUrl);
+    const pathMatch = url.pathname.match(/\/public\/recipe-images\/(.+)$/);
+    if (pathMatch?.[1]) {
+      await supabase.storage.from("recipe-images").remove([decodeURIComponent(pathMatch[1])]);
+    }
+  } catch {
+    // ignore cleanup errors
+  }
 }
 
 export const Route = createFileRoute("/app/resep")({
@@ -44,6 +87,7 @@ function ResepListPage() {
   const [open, setOpen] = useState(false);
   const [editData, setEditData] = useState<any>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -57,8 +101,9 @@ function ResepListPage() {
 
   const [formTitle, setFormTitle] = useState("");
   const [formDescription, setFormDescription] = useState("");
-  const [formImageUrl, setFormImageUrl] = useState("");
   const [formCategory, setFormCategory] = useState(DEFAULT_CATEGORIES[0]);
+  const [formImageFile, setFormImageFile] = useState<File | null>(null);
+  const [formImagePreview, setFormImagePreview] = useState<string | null>(null); // existing image URL or object URL
 
   const limits = useSubscriptionGate();
 
@@ -137,11 +182,30 @@ function ResepListPage() {
           }
         }
       }
+
+      // Generate a temporary ID for new recipes (needed for upload path)
+      const recipeId = editData?.id || crypto.randomUUID();
+
+      // Upload image if a new file is selected
+      let imageUrl = editData?.image_url ?? null;
+      if (formImageFile) {
+        // Delete old image if editing
+        if (editData?.id && editData.image_url) {
+          await deleteOldRecipeImage(editData.image_url);
+        }
+        const compressed = await compressImage(formImageFile);
+        imageUrl = await uploadRecipeImage(familyId!, recipeId, compressed);
+      } else if (formImagePreview === null && editData?.id && editData.image_url) {
+        // User removed the image (preview cleared)
+        await deleteOldRecipeImage(editData.image_url);
+        imageUrl = null;
+      }
+
       const payload: any = {
         family_id: familyId!,
         title: formTitle.trim(),
         description: formDescription.trim() || null,
-        image_url: formImageUrl.trim() || null,
+        image_url: imageUrl,
         category: formCategory,
         last_updated_by: profile?.id,
         last_updated_by_name: profile?.full_name,
@@ -151,6 +215,7 @@ function ResepListPage() {
         const { error } = await supabase.from("recipes").update(payload).eq("id", editData.id);
         if (error) throw error;
       } else {
+        payload.id = recipeId;
         payload.created_by = profile?.id;
         payload.created_by_name = profile?.full_name;
         const { error } = await supabase.from("recipes").insert(payload);
@@ -165,8 +230,9 @@ function ResepListPage() {
       setEditData(null);
       setFormTitle("");
       setFormDescription("");
-      setFormImageUrl("");
       setFormCategory(DEFAULT_CATEGORIES[0]);
+      setFormImageFile(null);
+      setFormImagePreview(null);
       tryFeedInsert({
         family_id: familyId!,
         actor_id: profile?.id,
@@ -199,8 +265,9 @@ function ResepListPage() {
     setEditData(null);
     setFormTitle("");
     setFormDescription("");
-    setFormImageUrl("");
     setFormCategory(DEFAULT_CATEGORIES[0]);
+    setFormImageFile(null);
+    setFormImagePreview(null);
     setOpen(true);
   };
 
@@ -208,13 +275,30 @@ function ResepListPage() {
     setEditData(item);
     setFormTitle(item.title ?? "");
     setFormDescription(item.description ?? "");
-    setFormImageUrl(item.image_url ?? "");
     setFormCategory(item.category ?? DEFAULT_CATEGORIES[0]);
+    setFormImageFile(null);
+    setFormImagePreview(item.image_url ?? null);
     setOpen(true);
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setFormImageFile(file);
+    // Show preview
+    const previewUrl = URL.createObjectURL(file);
+    setFormImagePreview(previewUrl);
+  };
+
+  const handleRemoveImage = () => {
+    setFormImageFile(null);
+    if (formImagePreview && !editData?.image_url) {
+      URL.revokeObjectURL(formImagePreview);
+    }
+    setFormImagePreview(null);
+  };
+
   const handleCardClick = (id: string) => {
-    // dynamically navigate to detail
     navigate({ to: "/app/resep/$resepId" as any, params: { resepId: id } as any });
   };
 
@@ -312,7 +396,7 @@ function ResepListPage() {
       )}
 
       {/* Add/Edit Dialog */}
-      <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) setEditData(null); }}>
+      <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setEditData(null); setFormImageFile(null); setFormImagePreview(null); } }}>
         <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editData ? T("Edit Resep") : T("Tambah Resep")}</DialogTitle>
@@ -334,8 +418,35 @@ function ResepListPage() {
               </Select>
             </div>
             <div>
-              <Label>{T("Gambar (URL)")}</Label>
-              <Input value={formImageUrl} onChange={(e) => setFormImageUrl(e.target.value)} placeholder="https://..." />
+              <Label>{T("Gambar")}</Label>
+              {formImagePreview ? (
+                <div className="relative rounded-lg overflow-hidden border border-border">
+                  <img src={formImagePreview} alt="Preview" className="w-full h-40 object-cover" />
+                  <button
+                    type="button"
+                    onClick={handleRemoveImage}
+                    className="absolute top-2 right-2 h-7 w-7 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center shadow-md hover:bg-destructive/90"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => fileRef.current?.click()}
+                  className="w-full border-2 border-dashed border-border rounded-lg p-8 text-center text-muted-foreground hover:border-primary hover:text-primary transition-colors cursor-pointer"
+                >
+                  <Upload className="h-6 w-6 mx-auto mb-2" />
+                  <span className="text-sm">{T("Upload gambar")}</span>
+                </button>
+              )}
+              <input
+                ref={fileRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleFileChange}
+              />
             </div>
             <div>
               <Label>{T("Deskripsi")}</Label>
@@ -348,7 +459,7 @@ function ResepListPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setOpen(false); setEditData(null); }}>{T("Batal")}</Button>
+            <Button variant="outline" onClick={() => { setOpen(false); setEditData(null); setFormImageFile(null); setFormImagePreview(null); }}>{T("Batal")}</Button>
             <Button
               disabled={!formTitle.trim() || upsertMutation.isPending}
               onClick={() => upsertMutation.mutate()}

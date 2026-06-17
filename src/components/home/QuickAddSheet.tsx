@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Plus, ShoppingBasket, ReceiptText, Calendar, StickyNote, ListTodo } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { useCurrencyInput } from "@/hooks/useCurrencyInput";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
@@ -70,6 +71,7 @@ function QuickForm({ mode, onDone, onBack }: { mode: Exclude<Mode, "menu">; onDo
   const qc = useQueryClient();
   const [busy, setBusy] = useState(false);
   const [v, setV] = useState<any>({});
+  const billNominal = useCurrencyInput();
 
   const log = async (desc: string, entity: string) => {
     if (!family || !profile) return;
@@ -91,7 +93,7 @@ function QuickForm({ mode, onDone, onBack }: { mode: Exclude<Mode, "menu">; onDo
         await log(`menambah stok ${v.item_name}`, "shopping");
         qc.invalidateQueries({ queryKey: ["shopping"] });
       } else if (mode === "bill") {
-        const { error } = await supabase.from("bills").insert({ family_id: family.id, bill_name: v.bill_name, nominal: v.nominal || 0, due_date: v.due_date, bill_type: v.bill_type || "lainnya" });
+        const { error } = await supabase.from("bills").insert({ family_id: family.id, bill_name: v.bill_name, nominal: billNominal.value, due_date: v.due_date, bill_type: v.bill_type || "lainnya" });
         if (error) throw error;
         await log(`menambah tagihan ${v.bill_name}`, "bill");
         qc.invalidateQueries({ queryKey: ["bills"] });
@@ -145,7 +147,7 @@ function QuickForm({ mode, onDone, onBack }: { mode: Exclude<Mode, "menu">; onDo
         <>
           <div><Label>Nama tagihan</Label><Input required onChange={(e) => setV({ ...v, bill_name: e.target.value })} /></div>
           <div className="grid grid-cols-2 gap-2">
-            <div><Label>Nominal</Label><Input required type="number" min={0} onChange={(e) => setV({ ...v, nominal: parseFloat(e.target.value) })} /></div>
+            <div><Label>Nominal (Rp)</Label><Input required type="text" inputMode="numeric" ref={billNominal.inputRef} value={billNominal.displayValue} onChange={billNominal.handleChange} onBlur={billNominal.handleBlur} placeholder="0" /></div>
             <div><Label>Jatuh tempo</Label><Input required type="date" onChange={(e) => setV({ ...v, due_date: e.target.value })} /></div>
           </div>
           <div>

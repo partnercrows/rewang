@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useLang } from "@/hooks/useLang";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import imageCompression from "browser-image-compression";
 import type { Tables } from "@/integrations/supabase/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,8 +12,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ChevronLeft, Edit2, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { ChevronLeft, Edit2, Trash2, Upload, X } from "lucide-react";
+import { useState, useRef } from "react";
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { formatDistanceToNow } from "date-fns";
@@ -21,6 +22,46 @@ import { id as idLocale } from "date-fns/locale";
 const DEFAULT_CATEGORIES = ["Sarapan", "Makan Siang", "Makan Malam", "Kue", "Minuman", "Lainnya"];
 
 type RecipeRow = Tables<"recipes">;
+
+async function compressImage(file: File): Promise<File> {
+  const options = {
+    maxSizeMB: 0.2,
+    maxWidthOrHeight: 800,
+    useWebWorker: true,
+    fileType: file.type || "image/jpeg",
+  };
+  try {
+    return await imageCompression(file, options);
+  } catch {
+    return file;
+  }
+}
+
+async function uploadRecipeImage(familyId: string, recipeId: string, file: File): Promise<string> {
+  const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
+  const path = `${familyId}/${recipeId}-${Date.now()}.${ext}`;
+
+  const { error: upErr } = await supabase.storage
+    .from("recipe-images")
+    .upload(path, file, { upsert: true, contentType: file.type || "image/jpeg" });
+  if (upErr) throw upErr;
+
+  const { data } = supabase.storage.from("recipe-images").getPublicUrl(path);
+  return data.publicUrl;
+}
+
+async function deleteOldRecipeImage(imageUrl: string | null) {
+  if (!imageUrl) return;
+  try {
+    const url = new URL(imageUrl);
+    const pathMatch = url.pathname.match(/\/public\/recipe-images\/(.+)$/);
+    if (pathMatch?.[1]) {
+      await supabase.storage.from("recipe-images").remove([decodeURIComponent(pathMatch[1])]);
+    }
+  } catch {
+    // ignore cleanup errors
+  }
+}
 
 export const Route = createFileRoute("/app/resep/$resepId")({
   head: () => ({ meta: [{ title: "Detail Resep — Rewang" }] }),
@@ -39,8 +80,10 @@ function ResepDetailPage() {
   const [editOpen, setEditOpen] = useState(false);
   const [formTitle, setFormTitle] = useState("");
   const [formDescription, setFormDescription] = useState("");
-  const [formImageUrl, setFormImageUrl] = useState("");
   const [formCategory, setFormCategory] = useState(DEFAULT_CATEGORIES[0]);
+  const [formImageFile, setFormImageFile] = useState<File | null>(null);
+  const [formImagePreview, setFormImagePreview] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const { data: recipe, isLoading } = useQuery({
     queryKey: ["recipe", resepId],
@@ -60,12 +103,27 @@ function ResepDetailPage() {
 
   const updateMutation = useMutation({
     mutationFn: async () => {
+      let imageUrl = recipe?.image_url ?? null;
+
+      if (formImageFile) {
+        // New file selected — delete old image first
+        if (recipe?.image_url) {
+          await deleteOldRecipeImage(recipe.image_url);
+        }
+        const compressed = await compressImage(formImageFile);
+        imageUrl = await uploadRecipeImage(familyId!, resepId, compressed);
+      } else if (formImagePreview === null && recipe?.image_url) {
+        // User removed the image
+        await deleteOldRecipeImage(recipe.image_url);
+        imageUrl = null;
+      }
+
       const { error } = await supabase
         .from("recipes")
         .update({
           title: formTitle.trim(),
           description: formDescription.trim() || null,
-          image_url: formImageUrl.trim() || null,
+          image_url: imageUrl,
           category: formCategory,
           updated_at: new Date().toISOString(),
           last_updated_by: profile?.id,
@@ -79,6 +137,8 @@ function ResepDetailPage() {
       qc.invalidateQueries({ queryKey: ["recipes", familyId] });
       toast.success(T("Resep diperbarui"));
       setEditOpen(false);
+      setFormImageFile(null);
+      setFormImagePreview(null);
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -107,9 +167,26 @@ function ResepDetailPage() {
     if (!recipe) return;
     setFormTitle(recipe.title ?? "");
     setFormDescription(recipe.description ?? "");
-    setFormImageUrl(recipe.image_url ?? "");
     setFormCategory(recipe.category ?? DEFAULT_CATEGORIES[0]);
+    setFormImageFile(null);
+    setFormImagePreview(recipe.image_url ?? null);
     setEditOpen(true);
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setFormImageFile(file);
+    const previewUrl = URL.createObjectURL(file);
+    setFormImagePreview(previewUrl);
+  };
+
+  const handleRemoveImage = () => {
+    setFormImageFile(null);
+    if (formImagePreview && !recipe?.image_url) {
+      URL.revokeObjectURL(formImagePreview);
+    }
+    setFormImagePreview(null);
   };
 
   if (isLoading) {
@@ -148,11 +225,11 @@ function ResepDetailPage() {
             <div className="flex items-center gap-2 text-xs text-white/80 mt-1">
               <span>{recipe.created_by_name ?? T("Anggota")}</span>
               <span>·</span>
-              <span>{formatDistanceToNow(new Date(recipe.created_at), { addSuffix: true, locale: idLocale })}</span>
+              <span>{formatDistanceToNow(new Date(recipe.created_at!), { addSuffix: true, locale: idLocale })}</span>
               {recipe.updated_at && recipe.updated_at !== recipe.created_at && (
                 <>
                   <span>·</span>
-                  <span>{T("Diperbarui")} {formatDistanceToNow(new Date(recipe.updated_at), { addSuffix: true, locale: idLocale })}</span>
+                <span>{T("Diperbarui")} {formatDistanceToNow(new Date(recipe.updated_at!), { addSuffix: true, locale: idLocale })}</span>
                 </>
               )}
             </div>
@@ -167,11 +244,11 @@ function ResepDetailPage() {
           <div className="flex items-center gap-2 text-xs text-muted-foreground mb-4">
             <span>{recipe.created_by_name ?? T("Anggota")}</span>
             <span>·</span>
-            <span>{formatDistanceToNow(new Date(recipe.created_at), { addSuffix: true, locale: idLocale })}</span>
+            <span>{formatDistanceToNow(new Date(recipe.created_at!), { addSuffix: true, locale: idLocale })}</span>
             {recipe.updated_at && recipe.updated_at !== recipe.created_at && (
               <>
                 <span>·</span>
-                <span>{T("Diperbarui")} {formatDistanceToNow(new Date(recipe.updated_at), { addSuffix: true, locale: idLocale })}</span>
+                <span>{T("Diperbarui")} {formatDistanceToNow(new Date(recipe.updated_at!), { addSuffix: true, locale: idLocale })}</span>
               </>
             )}
           </div>
@@ -200,7 +277,7 @@ function ResepDetailPage() {
       </div>
 
       {/* Edit Dialog */}
-      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+      <Dialog open={editOpen} onOpenChange={(v) => { setEditOpen(v); if (!v) { setFormImageFile(null); setFormImagePreview(null); } }}>
         <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{T("Edit Resep")}</DialogTitle>
@@ -222,8 +299,35 @@ function ResepDetailPage() {
               </Select>
             </div>
             <div>
-              <Label>{T("Gambar (URL)")}</Label>
-              <Input value={formImageUrl} onChange={(e) => setFormImageUrl(e.target.value)} placeholder="https://..." />
+              <Label>{T("Gambar")}</Label>
+              {formImagePreview ? (
+                <div className="relative rounded-lg overflow-hidden border border-border">
+                  <img src={formImagePreview} alt="Preview" className="w-full h-40 object-cover" />
+                  <button
+                    type="button"
+                    onClick={handleRemoveImage}
+                    className="absolute top-2 right-2 h-7 w-7 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center shadow-md hover:bg-destructive/90"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => fileRef.current?.click()}
+                  className="w-full border-2 border-dashed border-border rounded-lg p-8 text-center text-muted-foreground hover:border-primary hover:text-primary transition-colors cursor-pointer"
+                >
+                  <Upload className="h-6 w-6 mx-auto mb-2" />
+                  <span className="text-sm">{T("Upload gambar")}</span>
+                </button>
+              )}
+              <input
+                ref={fileRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleFileChange}
+              />
             </div>
             <div>
               <Label>{T("Deskripsi")}</Label>
@@ -236,7 +340,7 @@ function ResepDetailPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditOpen(false)}>{T("Batal")}</Button>
+            <Button variant="outline" onClick={() => { setEditOpen(false); setFormImageFile(null); setFormImagePreview(null); }}>{T("Batal")}</Button>
             <Button
               disabled={!formTitle.trim() || updateMutation.isPending}
               onClick={() => updateMutation.mutate()}

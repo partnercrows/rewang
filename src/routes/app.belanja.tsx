@@ -17,6 +17,7 @@ import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { toast } from "sonner";
 import { cn, formatRupiah } from "@/lib/utils";
+import { useCurrencyInput } from "@/hooks/useCurrencyInput";
 import { formatDistanceToNow } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
 
@@ -775,14 +776,14 @@ function PriorityBadge({ p }: { p: string }) {
 function WishlistForm({ onSubmit, busy }: { onSubmit: (v: any) => void; busy: boolean }) {
   const { T } = useLang();
   const [item_name, setName] = useState("");
-  const [estimated_price, setPrice] = useState("");
+  const priceInput = useCurrencyInput();
   const [priority, setPriority] = useState("medium");
   const [notes, setNotes] = useState("");
   return (
-    <form onSubmit={(e) => { e.preventDefault(); onSubmit({ item_name, estimated_price: parseFloat(estimated_price) || 0, priority, notes }); }} className="space-y-3">
+    <form onSubmit={(e) => { e.preventDefault(); onSubmit({ item_name, estimated_price: priceInput.value, priority, notes }); }} className="space-y-3">
       <div><Label>{T("Nama item")}</Label><Input required value={item_name} onChange={(e) => setName(e.target.value)} /></div>
       <div className="grid grid-cols-2 gap-2">
-        <div><Label>{T("Harga estimasi")}</Label><Input type="number" min={0} placeholder="0" value={estimated_price} onChange={(e) => setPrice(e.target.value)} /></div>
+        <div><Label>{T("Harga estimasi")}</Label><Input type="text" inputMode="numeric" ref={priceInput.inputRef} value={priceInput.displayValue} onChange={priceInput.handleChange} onBlur={priceInput.handleBlur} placeholder="0" /></div>
         <div><Label>{T("Prioritas")}</Label>
           <Select value={priority} onValueChange={setPriority}>
             <SelectTrigger><SelectValue /></SelectTrigger>
