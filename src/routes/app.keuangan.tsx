@@ -7,6 +7,7 @@ import { useSubscriptionGate } from "@/hooks/useSubscriptionGate";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { formatRupiah, cn, daysUntil, normalizePhone } from "@/lib/utils";
+import { useCurrencyInput } from "@/hooks/useCurrencyInput";
 import { useState, useMemo, useRef } from "react";
 import { toast } from "sonner";
 import { format as fmtDate } from "date-fns";
@@ -843,21 +844,21 @@ function BillCard({ bill, onDelete, onPay, onDeletePrompt }: { bill: any; onDele
 function AddBillForm({ onSubmit, busy }: { onSubmit: (v: any) => void; busy: boolean }) {
   const { T } = useLang();
   const [bill_name, setName] = useState("");
-  const [nominal, setNominal] = useState("");
+  const nominalInput = useCurrencyInput();
   const [due_date, setDueDate] = useState(new Date().toISOString().slice(0, 10));
   const [recurrence_interval, setRecurrence] = useState<string>("none");
   const [bill_type, setBillType] = useState("tagihan");
   const [notes, setNotes] = useState("");
   const [reminder_days, setReminderDays] = useState<string>("none");
   return (
-    <form onSubmit={(e) => { e.preventDefault(); onSubmit({ bill_name, nominal: Number(nominal) || 0, due_date, is_recurring: recurrence_interval !== "none", recurrence_interval: recurrence_interval === "none" ? null : recurrence_interval, bill_type, notes: notes.trim() || null, is_paid: false, reminder_days: reminder_days === "none" ? null : Number(reminder_days) }); }} className="space-y-3">
+    <form onSubmit={(e) => { e.preventDefault(); onSubmit({ bill_name, nominal: nominalInput.value, due_date, is_recurring: recurrence_interval !== "none", recurrence_interval: recurrence_interval === "none" ? null : recurrence_interval, bill_type, notes: notes.trim() || null, is_paid: false, reminder_days: reminder_days === "none" ? null : Number(reminder_days) }); }} className="space-y-3">
       <div><Label>{T("Nama Tagihan", "Bill Name")}</Label><Input required value={bill_name} onChange={(e) => setName(e.target.value)} placeholder={T("Contoh: Listrik PLN", "e.g. Electricity")} /></div>
-      <div className="grid grid-cols-2 gap-2"><div><Label>{T("Nominal (Rp)", "Amount (Rp)")}</Label><Input required type="number" min={0} value={nominal} onChange={(e) => setNominal(e.target.value)} placeholder="0" /></div><div><Label>{T("Jatuh Tempo", "Due Date")}</Label><Input type="date" value={due_date} onChange={(e) => setDueDate(e.target.value)} /></div></div>
+      <div className="grid grid-cols-2 gap-2"><div><Label>{T("Nominal (Rp)", "Amount (Rp)")}</Label><Input required type="text" inputMode="numeric" ref={nominalInput.inputRef} value={nominalInput.displayValue} onChange={nominalInput.handleChange} onBlur={nominalInput.handleBlur} placeholder="0" /></div><div><Label>{T("Jatuh Tempo", "Due Date")}</Label><Input type="date" value={due_date} onChange={(e) => setDueDate(e.target.value)} /></div></div>
       <div><Label>{T("Jenis", "Type")}</Label><Select value={bill_type} onValueChange={setBillType}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="tagihan">{T("Tagihan", "Bill")}</SelectItem><SelectItem value="listrik">{T("Listrik", "Electricity")}</SelectItem><SelectItem value="air">{T("Air", "Water")}</SelectItem><SelectItem value="internet">{T("Internet", "Internet")}</SelectItem><SelectItem value="sewa">{T("Sewa", "Rent")}</SelectItem><SelectItem value="asuransi">{T("Asuransi", "Insurance")}</SelectItem><SelectItem value="lainnya">{T("Lainnya", "Other")}</SelectItem></SelectContent></Select></div>
       <div><Label>{T("Tagihan Berulang", "Recurring Bill")}</Label><Select value={recurrence_interval} onValueChange={setRecurrence}><SelectTrigger><SelectValue placeholder={T("Tidak berulang", "Not recurring")} /></SelectTrigger><SelectContent><SelectItem value="none">{T("Tidak Berulang", "Not Recurring")}</SelectItem><SelectItem value="monthly">{T("Tiap Bulan", "Every Month")}</SelectItem><SelectItem value="yearly">{T("Tiap Tahun", "Every Year")}</SelectItem></SelectContent></Select></div>
       <div><Label>{T("Pengingat Jatuh Tempo", "Due Date Reminder")}</Label><Select value={reminder_days} onValueChange={setReminderDays}><SelectTrigger><SelectValue placeholder={T("Tidak ada pengingat", "No reminder")} /></SelectTrigger><SelectContent><SelectItem value="none">{T("Tidak Ada", "None")}</SelectItem><SelectItem value="1">H-1 ({T("1 hari sebelum", "1 day before")})</SelectItem><SelectItem value="3">H-3 ({T("3 hari sebelum", "3 days before")})</SelectItem><SelectItem value="7">H-7 ({T("7 hari sebelum", "7 days before")})</SelectItem><SelectItem value="30">H-30 ({T("30 hari sebelum", "30 days before")})</SelectItem></SelectContent></Select></div>
       <div><Label>{T("Catatan", "Notes")}</Label><Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder={T("Opsional", "Optional")} /></div>
-      <Button type="submit" className="w-full" disabled={busy || !bill_name.trim() || !nominal || Number(nominal) <= 0}>{T("Simpan", "Save")}</Button>
+      <Button type="submit" className="w-full" disabled={busy || !bill_name.trim() || nominalInput.value <= 0}>{T("Simpan", "Save")}</Button>
     </form>
   );
 }
@@ -872,12 +873,12 @@ function DebtCard({ d, onDelete, onPay, onDeletePrompt }: { d: any; onDelete: (i
   const isHutang = d.type === "hutang";
   const isLunas = remaining <= 0;
   const waText = encodeURIComponent(isHutang ? `Halo ${d.person_name}, ini pengingat cicilan saya. Sisa: ${formatRupiah(remaining)}` : `Halo ${d.person_name}, ini pengingat cicilan Anda. Sisa: ${formatRupiah(remaining)}`);
-  const [payAmt, setPayAmt] = useState<string>("");
+  const payAmtInput = useCurrencyInput();
   const [payMethod, setPayMethod] = useState("Transfer");
   const [payDate, setPayDate] = useState(new Date().toISOString().slice(0, 10));
   const [payOpen, setPayOpen] = useState(false);
   const logs = [...(d.installment_logs ?? [])].sort((a: any, b: any) => (a.installment_number || 0) - (b.installment_number || 0));
-  const handlePay = () => { const n = parseFloat(payAmt); if (n > 0 && n <= remaining) { onPay(n, payMethod, payDate); setPayOpen(false); setPayAmt(""); setPayMethod("Transfer"); setPayDate(new Date().toISOString().slice(0, 10)); } else if (n > remaining) { toast.error(T("Nominal melebihi sisa yang harus dibayar", "Amount exceeds remaining balance")); } };
+  const handlePay = () => { const n = payAmtInput.value; if (n > 0 && n <= remaining) { onPay(n, payMethod, payDate); setPayOpen(false); payAmtInput.setValue(0); setPayMethod("Transfer"); setPayDate(new Date().toISOString().slice(0, 10)); } else if (n > remaining) { toast.error(T("Nominal melebihi sisa yang harus dibayar", "Amount exceeds remaining balance")); } };
 
   const exportPDF = async () => {
     try {
@@ -936,7 +937,7 @@ function DebtCard({ d, onDelete, onPay, onDeletePrompt }: { d: any; onDelete: (i
       {!isLunas && (
         <Dialog open={payOpen} onOpenChange={setPayOpen}>
           <div className="flex gap-2 mt-3">
-            <DialogTrigger asChild><Button size="sm" variant="outline" className="flex-1" onClick={() => setPayAmt(String(d.monthly_installment || ""))}><Wallet className="h-3.5 w-3.5 mr-1" /> {T("Bayar", "Pay")}</Button></DialogTrigger>
+            <DialogTrigger asChild><Button size="sm" variant="outline" className="flex-1" onClick={() => payAmtInput.setValue(Number(d.monthly_installment || 0))}><Wallet className="h-3.5 w-3.5 mr-1" /> {T("Bayar", "Pay")}</Button></DialogTrigger>
             {d.phone_number && <Button asChild size="sm" variant="secondary"><a href={`https://wa.me/${normalizePhone(d.phone_number)}?text=${waText}`} target="_blank" rel="noreferrer"><MessageCircle className="h-4 w-4 mr-1" /> WA</a></Button>}
           </div>
           <DialogContent>
@@ -944,9 +945,9 @@ function DebtCard({ d, onDelete, onPay, onDeletePrompt }: { d: any; onDelete: (i
             <div className="space-y-3">
               <div className="text-xs text-muted-foreground">{T("Sisa", "Remaining")}: {formatRupiah(remaining)} {T("dari", "of")} {formatRupiah(d.total_amount)}</div>
               <div><Label>{T("Metode Pembayaran", "Payment Method")}</Label><div className="flex gap-2 mt-1"><button type="button" onClick={() => setPayMethod("Transfer")} className={cn("flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl border text-sm font-medium transition", payMethod === "Transfer" ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border text-muted-foreground")}><Banknote className="h-4 w-4" /> Transfer</button><button type="button" onClick={() => setPayMethod("Cash")} className={cn("flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl border text-sm font-medium transition", payMethod === "Cash" ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border text-muted-foreground")}><Coins className="h-4 w-4" /> Cash</button></div></div>
-              <div><Label>{T("Nominal (Rp)", "Amount (Rp)")}</Label><Input type="number" min={0} max={remaining} value={payAmt} onChange={(e) => setPayAmt(e.target.value)} placeholder="0" />{payAmt && parseFloat(payAmt) < remaining && <p className="text-[11px] text-muted-foreground mt-1">{T("Bayar sebagian:", "Partial payment:")} {formatRupiah(parseFloat(payAmt))} · {T("Sisa setelah ini:", "Remaining after:")} {formatRupiah(remaining - parseFloat(payAmt))}</p>}</div>
+              <div><Label>{T("Nominal (Rp)", "Amount (Rp)")}</Label><Input type="text" inputMode="numeric" ref={payAmtInput.inputRef} value={payAmtInput.displayValue} onChange={payAmtInput.handleChange} onBlur={payAmtInput.handleBlur} placeholder="0" />{payAmtInput.value > 0 && payAmtInput.value < remaining && <p className="text-[11px] text-muted-foreground mt-1">{T("Bayar sebagian:", "Partial payment:")} {formatRupiah(payAmtInput.value)} · {T("Sisa setelah ini:", "Remaining after:")} {formatRupiah(remaining - payAmtInput.value)}</p>}</div>
               <div><Label>{T("Tanggal Bayar", "Payment Date")}</Label><Input type="date" value={payDate} onChange={(e) => setPayDate(e.target.value)} /></div>
-              <Button className="w-full" onClick={handlePay} disabled={!payAmt || parseFloat(payAmt) <= 0}><Wallet className="h-4 w-4 mr-1" /> {T("Catat Pembayaran", "Record Payment")}</Button>
+              <Button className="w-full" onClick={handlePay} disabled={payAmtInput.value <= 0}><Wallet className="h-4 w-4 mr-1" /> {T("Catat Pembayaran", "Record Payment")}</Button>
             </div>
           </DialogContent>
         </Dialog>
@@ -964,13 +965,15 @@ function DebtCard({ d, onDelete, onPay, onDeletePrompt }: { d: any; onDelete: (i
 // ========== ADD DEBT FORM ==========
 function AddDebtForm({ onSubmit, busy }: { onSubmit: (v: any) => void; busy: boolean }) {
   const { T } = useLang();
-  const [type, setType] = useState("hutang"); const [person_name, setName] = useState(""); const [phone_number, setPhone] = useState(""); const [address, setAddress] = useState(""); const [total_amount, setAmt] = useState(""); const [monthly_installment, setInst] = useState(""); const [start_date, setDate] = useState(new Date().toISOString().slice(0, 10));
-  return (<form onSubmit={(e) => { e.preventDefault(); onSubmit({ type, person_name, phone_number, address, total_amount: Number(total_amount) || 0, monthly_installment: Number(monthly_installment) || 0, start_date }); }} className="space-y-3">
+  const totalAmountInput = useCurrencyInput();
+  const installmentInput = useCurrencyInput();
+  const [type, setType] = useState("hutang"); const [person_name, setName] = useState(""); const [phone_number, setPhone] = useState(""); const [address, setAddress] = useState(""); const [start_date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  return (<form onSubmit={(e) => { e.preventDefault(); onSubmit({ type, person_name, phone_number, address, total_amount: totalAmountInput.value, monthly_installment: installmentInput.value, start_date }); }} className="space-y-3">
     <div><Label>{T("Jenis", "Type")}</Label><Select value={type} onValueChange={setType}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="hutang">{T("Hutang (saya berhutang)", "Debt (I owe)")}</SelectItem><SelectItem value="piutang">{T("Piutang (orang berhutang ke saya)", "Credit (owed to me)")}</SelectItem></SelectContent></Select></div>
     <div><Label>{T("Nama", "Name")}</Label><Input required value={person_name} onChange={(e) => setName(e.target.value)} /></div>
     <div><Label>{T("No. WhatsApp", "WhatsApp No.")}</Label><Input value={phone_number} onChange={(e) => setPhone(e.target.value)} placeholder="62812..." /></div>
     <div><Label>{T("Alamat", "Address")} ({T("opsional", "optional")})</Label><Textarea rows={2} value={address} onChange={(e) => setAddress(e.target.value)} /></div>
-    <div className="grid grid-cols-2 gap-2"><div><Label>{T("Total (Rp)", "Total (Rp)")}</Label><Input required type="number" min={0} value={total_amount} onChange={(e) => setAmt(e.target.value)} placeholder="0" /></div><div><Label>{T("Cicilan/bln", "Installment/mo")}</Label><Input type="number" min={0} value={monthly_installment} onChange={(e) => setInst(e.target.value)} placeholder="0" /></div></div>
+    <div className="grid grid-cols-2 gap-2"><div><Label>{T("Total (Rp)", "Total (Rp)")}</Label><Input required type="text" inputMode="numeric" ref={totalAmountInput.inputRef} value={totalAmountInput.displayValue} onChange={totalAmountInput.handleChange} onBlur={totalAmountInput.handleBlur} placeholder="0" /></div><div><Label>{T("Cicilan/bln", "Installment/mo")}</Label><Input type="text" inputMode="numeric" ref={installmentInput.inputRef} value={installmentInput.displayValue} onChange={installmentInput.handleChange} onBlur={installmentInput.handleBlur} placeholder="0" /></div></div>
     <div><Label>{T("Tanggal mulai", "Start date")}</Label><Input type="date" value={start_date} onChange={(e) => setDate(e.target.value)} /></div>
     <Button type="submit" className="w-full" disabled={busy}>{T("Simpan", "Save")}</Button>
   </form>);
@@ -1015,7 +1018,8 @@ function KegiatanCard({ kg, onDetail, onDelete, lunasCount, totalPeserta, totalT
 
 function AddKegiatanForm({ onSubmit, busy }: { onSubmit: (v: any) => void; busy: boolean }) {
   const { T } = useLang();
-  const [nama, setNama] = useState(""); const [sifat, setSifat] = useState("sekali_jalan"); const [jenis, setJenis] = useState("iuran_rata"); const [jumlah, setJumlah] = useState(""); const [batas, setBatas] = useState("");
+  const jumlahInput = useCurrencyInput();
+  const [nama, setNama] = useState(""); const [sifat, setSifat] = useState("sekali_jalan"); const [jenis, setJenis] = useState("iuran_rata"); const [batas, setBatas] = useState("");
   const [penanggungJawab, setPenanggungJawab] = useState(""); const [catatan, setCatatan] = useState("");
   const [pesertaInput, setPesertaInput] = useState(""); const [peserta, setPeserta] = useState<{ nama: string; alamat: string; no_hp: string }[]>([]); const [pesertaMode, setPesertaMode] = useState<"manual" | "excel">("manual"); const fileRef = useRef<HTMLInputElement>(null);
   const addPeserta = () => { const n = pesertaInput.trim(); if (!n) return; if (peserta.some(p => p.nama.toLowerCase() === n.toLowerCase())) { toast.error(T("Nama sudah ada", "Name exists")); return; } setPeserta(prev => [...prev, { nama: n, alamat: "", no_hp: "" }]); setPesertaInput(""); };
@@ -1024,11 +1028,11 @@ function AddKegiatanForm({ onSubmit, busy }: { onSubmit: (v: any) => void; busy:
   const downloadTemplate = async () => { try { const XLSX = await import("xlsx"); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([["Nama", "Alamat", "No HP"]]), "Peserta"); XLSX.writeFile(wb, "template_peserta_kolektif.xlsx"); } catch { toast.error(T("Gagal unduh template", "Download failed")); } };
   const previewText = jenis === "iuran_sukarela" ? T("Default: Absen / Tidak Ikut", "Default: Absent") : T("Default: Belum Bayar", "Default: Unpaid");
   return (
-    <form onSubmit={e => { e.preventDefault(); if (peserta.length === 0) { toast.error(T("Minimal 1 peserta", "At least 1 participant")); return; } onSubmit({ nama_kegiatan: nama, sifat_kegiatan: sifat, jenis_pembayaran: jenis, jumlah_bayar: jenis === "iuran_rata" ? Number(jumlah) || 0 : null, batas_tanggal: batas || null, penanggung_jawab: penanggungJawab.trim() || null, catatan: catatan.trim() || null, peserta }); }} className="space-y-3">
+    <form onSubmit={e => { e.preventDefault(); if (peserta.length === 0) { toast.error(T("Minimal 1 peserta", "At least 1 participant")); return; } onSubmit({ nama_kegiatan: nama, sifat_kegiatan: sifat, jenis_pembayaran: jenis, jumlah_bayar: jenis === "iuran_rata" ? jumlahInput.value || 0 : null, batas_tanggal: batas || null, penanggung_jawab: penanggungJawab.trim() || null, catatan: catatan.trim() || null, peserta }); }} className="space-y-3">
       <div><Label>{T("Nama Kegiatan", "Activity Name")}</Label><Input required value={nama} onChange={e => setNama(e.target.value)} placeholder={T("Contoh: Kas Lebaran 2026", "e.g. Eid Fund 2026")} /></div>
       <div><Label>{T("Sifat Kegiatan", "Activity Nature")}</Label><div className="flex gap-2 mt-1">{[{ key: "sekali_jalan", label: T("Sekali Jalan", "One-time") }, { key: "rutin", label: T("Rutin", "Routine") }].map(opt => (<button key={opt.key} type="button" onClick={() => setSifat(opt.key)} className={cn("flex-1 px-3 py-2.5 rounded-xl border text-sm font-medium transition", sifat === opt.key ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border text-muted-foreground")}>{opt.label}</button>))}</div></div>
       <div><Label>{T("Jenis Pembayaran", "Payment Type")}</Label><div className="flex gap-2 mt-1">{[{ key: "iuran_rata", label: T("Iuran Rata", "Flat Fee") }, { key: "iuran_sukarela", label: T("Iuran Sukarela", "Voluntary") }].map(opt => (<button key={opt.key} type="button" onClick={() => setJenis(opt.key)} className={cn("flex-1 px-3 py-2.5 rounded-xl border text-sm font-medium transition", jenis === opt.key ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border text-muted-foreground")}>{opt.label}</button>))}</div></div>
-      {jenis === "iuran_rata" && <div><Label>{T("Jumlah Bayar (Rp)", "Amount (Rp)")}</Label><Input required type="number" min={0} value={jumlah} onChange={e => setJumlah(e.target.value)} placeholder="50000" /></div>}
+      {jenis === "iuran_rata" && <div><Label>{T("Jumlah Bayar (Rp)", "Amount (Rp)")}</Label><Input required type="text" inputMode="numeric" ref={jumlahInput.inputRef} value={jumlahInput.displayValue} onChange={jumlahInput.handleChange} onBlur={jumlahInput.handleBlur} placeholder="50000" /></div>}
       <div><Label>{T("Batas Tanggal", "Due Date")} ({T("opsional", "optional")})</Label><Input type="date" value={batas} onChange={e => setBatas(e.target.value)} /></div>
       <div><Label>{T("Penanggung Jawab", "Person in Charge")} ({T("opsional", "optional")})</Label><Input value={penanggungJawab} onChange={e => setPenanggungJawab(e.target.value)} placeholder={T("Nama PJ", "PIC Name")} /></div>
       <div><Label>{T("Catatan", "Notes")} ({T("opsional", "optional")})</Label><Textarea rows={2} value={catatan} onChange={e => setCatatan(e.target.value)} placeholder={T("Info tambahan kegiatan...", "Additional info...")} /></div>
@@ -1046,9 +1050,9 @@ function AddKegiatanForm({ onSubmit, busy }: { onSubmit: (v: any) => void; busy:
 
 function DetailKegiatan({ kg, peserta: ps, allPeserta, isRata, targetNominal, onLunas, onAbsen, onEditNominal, onDeletePeserta, onAddPeserta, onEditKegiatan, onSelesai, onBukaKembali, kPesertaSearch, setKPesertaSearch }: { kg: any; peserta: any[]; allPeserta: any[]; isRata: boolean; targetNominal: number; onLunas: (id: string, nominal: number) => void; onAbsen: (id: string) => void; onEditNominal: (id: string, nominal: number) => void; onDeletePeserta: (id: string, nama: string, soft: boolean) => void; onAddPeserta: (pes: { nama: string; alamat?: string; no_hp?: string }[]) => void; onEditKegiatan: () => void; onSelesai: () => void; onBukaKembali: () => void; kPesertaSearch: string; setKPesertaSearch: (v: string) => void }) {
   const { T } = useLang();
-  const [editNomId, setEditNomId] = useState<string | null>(null); const [editNomVal, setEditNomVal] = useState("");
+      const [editNomId, setEditNomId] = useState<string | null>(null); const editNomInput = useCurrencyInput();
   const [addPesInput, setAddPesInput] = useState(""); const [showAddPes, setShowAddPes] = useState(false);
-  const [sukarelaBayarId, setSukarelaBayarId] = useState<string | null>(null); const [sukarelaNominal, setSukarelaNominal] = useState("");
+      const [sukarelaBayarId, setSukarelaBayarId] = useState<string | null>(null); const sukarelaInput = useCurrencyInput();
   const waText = (p: any) => encodeURIComponent(`Assalamualaikum Wr. Wb. / Halo Bapak/Ibu ${p.nama}, mengingatkan untuk partisipasi agenda ${kg.nama_kegiatan} saat ini belum tercatat di rekap kami. Pembayaran bisa diserahkan ke pengurus atau via transfer ya. Terima kasih banyak atas dukungannya, Jazakumullah Khayra / Terima kasih banyak 🙏`);
   const totalTerkumpul = ps.reduce((s: number, p: any) => s + Number(p.nominal), 0);
   const lc = allPeserta.filter((p: any) => p.status_bayar === "lunas").length;
@@ -1106,11 +1110,11 @@ function DetailKegiatan({ kg, peserta: ps, allPeserta, isRata, targetNominal, on
               </div>
               <div className="flex items-center gap-1 shrink-0 ml-2">
                 {!isLunas && !isAbsen && !isSelesai && (<>
-                  {!isRata ? (<Button size="sm" variant="outline" className="h-7 text-xs text-emerald-600 border-emerald-300 hover:bg-emerald-50" onClick={() => { setSukarelaBayarId(p.id); setSukarelaNominal(""); }}><Check className="h-3 w-3 mr-0.5" />{T("Bayar", "Pay")}</Button>) : (<Button size="sm" variant="outline" className="h-7 text-xs text-emerald-600 border-emerald-300 hover:bg-emerald-50" onClick={() => onLunas(p.id, targetNominal)}><Check className="h-3 w-3 mr-0.5" />{T("Lunas", "Paid")}</Button>)}
+                  {!isRata ? (<Button size="sm" variant="outline" className="h-7 text-xs text-emerald-600 border-emerald-300 hover:bg-emerald-50" onClick={() => { setSukarelaBayarId(p.id); sukarelaInput.setValue(0); }}><Check className="h-3 w-3 mr-0.5" />{T("Bayar", "Pay")}</Button>) : (<Button size="sm" variant="outline" className="h-7 text-xs text-emerald-600 border-emerald-300 hover:bg-emerald-50" onClick={() => onLunas(p.id, targetNominal)}><Check className="h-3 w-3 mr-0.5" />{T("Lunas", "Paid")}</Button>)}
                   {pNoHp && (<Button size="icon" variant="ghost" className="h-7 w-7 text-green-600" asChild><a href={`https://wa.me/${normalizePhone(pNoHp)}?text=${waText(p)}`} target="_blank" rel="noreferrer"><MessageCircle className="h-3.5 w-3.5" /></a></Button>)}
                   <Button size="icon" variant="ghost" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => onAbsen(p.id)}><ShieldX className="h-3.5 w-3.5" /></Button>
                 </>)}
-                {isLunas && !isSelesai && (<Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => { setEditNomId(p.id); setEditNomVal(String(p.nominal)); }}><Pencil className="h-3.5 w-3.5" /></Button>)}
+                {isLunas && !isSelesai && (<Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => { setEditNomId(p.id); editNomInput.setValue(p.nominal); }}><Pencil className="h-3.5 w-3.5" /></Button>)}
                 {!isSelesai && (<Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => onDeletePeserta(p.id, p.nama, isLunas)}><Trash2 className="h-3.5 w-3.5" /></Button>)}
               </div>
             </div>
@@ -1118,9 +1122,9 @@ function DetailKegiatan({ kg, peserta: ps, allPeserta, isRata, targetNominal, on
         })}
       </div>
       {/* Edit Nominal Dialog */}
-      <Dialog open={!!editNomId} onOpenChange={(open) => { if (!open) { setEditNomId(null); setEditNomVal(""); } }}><DialogContent><DialogHeader><DialogTitle>{T("Edit Nominal", "Edit Amount")}</DialogTitle></DialogHeader><div className="space-y-3"><div><Label>{T("Nominal (Rp)", "Amount (Rp)")}</Label><Input type="number" min={0} value={editNomVal} onChange={e => setEditNomVal(e.target.value)} /></div><Button className="w-full" onClick={() => { if (editNomId && Number(editNomVal) > 0) { onEditNominal(editNomId, Number(editNomVal)); setEditNomId(null); setEditNomVal(""); } }}>{T("Simpan", "Save")}</Button></div></DialogContent></Dialog>
+      <Dialog open={!!editNomId} onOpenChange={(open) => { if (!open) { setEditNomId(null); editNomInput.setValue(0); } }}><DialogContent><DialogHeader><DialogTitle>{T("Edit Nominal", "Edit Amount")}</DialogTitle></DialogHeader><div className="space-y-3"><div><Label>{T("Nominal (Rp)", "Amount (Rp)")}</Label><Input type="text" inputMode="numeric" ref={editNomInput.inputRef} value={editNomInput.displayValue} onChange={editNomInput.handleChange} onBlur={editNomInput.handleBlur} placeholder="0" /></div><Button className="w-full" onClick={() => { if (editNomId && editNomInput.value > 0) { onEditNominal(editNomId, editNomInput.value); setEditNomId(null); editNomInput.setValue(0); } }}>{T("Simpan", "Save")}</Button></div></DialogContent></Dialog>
       {/* Sukarela Bayar Dialog - no preset buttons, only input */}
-      <Dialog open={!!sukarelaBayarId} onOpenChange={(open) => { if (!open) { setSukarelaBayarId(null); setSukarelaNominal(""); } }}><DialogContent><DialogHeader><DialogTitle>{T("Jumlah Bayar", "Payment Amount")}</DialogTitle></DialogHeader><div className="space-y-3"><div><Label>{T("Nominal (Rp)", "Amount (Rp)")}</Label><Input type="number" min={0} value={sukarelaNominal} onChange={e => setSukarelaNominal(e.target.value)} placeholder={T("Masukkan jumlah pembayaran", "Enter payment amount")} /></div><Button className="w-full" disabled={!sukarelaNominal || Number(sukarelaNominal) <= 0} onClick={() => { if (sukarelaBayarId && Number(sukarelaNominal) > 0) { onLunas(sukarelaBayarId, Number(sukarelaNominal)); setSukarelaBayarId(null); setSukarelaNominal(""); } }}>{T("Simpan Pembayaran", "Save Payment")}</Button></div></DialogContent></Dialog>
+      <Dialog open={!!sukarelaBayarId} onOpenChange={(open) => { if (!open) { setSukarelaBayarId(null); sukarelaInput.setValue(0); } }}><DialogContent><DialogHeader><DialogTitle>{T("Jumlah Bayar", "Payment Amount")}</DialogTitle></DialogHeader><div className="space-y-3"><div><Label>{T("Nominal (Rp)", "Amount (Rp)")}</Label><Input type="text" inputMode="numeric" ref={sukarelaInput.inputRef} value={sukarelaInput.displayValue} onChange={sukarelaInput.handleChange} onBlur={sukarelaInput.handleBlur} placeholder={T("Masukkan jumlah pembayaran", "Enter payment amount")} /></div><Button className="w-full" disabled={sukarelaInput.value <= 0} onClick={() => { if (sukarelaBayarId && sukarelaInput.value > 0) { onLunas(sukarelaBayarId, sukarelaInput.value); setSukarelaBayarId(null); sukarelaInput.setValue(0); } }}>{T("Simpan Pembayaran", "Save Payment")}</Button></div></DialogContent></Dialog>
     </div>
   );
 }
