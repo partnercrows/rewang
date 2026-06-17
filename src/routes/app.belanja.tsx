@@ -5,6 +5,7 @@ import { useLang } from "@/hooks/useLang";
 import { useSubscriptionGate } from "@/hooks/useSubscriptionGate";
 import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import imageCompression from "browser-image-compression";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,7 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Trash2, Minus, Search, Edit2, ShoppingCart, Star, Package, UtensilsCrossed, Image as ImageIcon, Lock } from "lucide-react";
+import { Plus, Trash2, Minus, Search, Edit2, ShoppingCart, Star, Package, UtensilsCrossed, Image as ImageIcon, Lock, Upload, X } from "lucide-react";
 import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { toast } from "sonner";
@@ -24,6 +25,47 @@ import { id as idLocale } from "date-fns/locale";
 async function tryFeedInsert(payload: any) {
   try { await supabase.from("activity_feed").insert(payload as any); } catch {}
 }
+
+async function compressImage(file: File): Promise<File> {
+  const options = {
+    maxSizeMB: 0.2,
+    maxWidthOrHeight: 800,
+    useWebWorker: true,
+    fileType: file.type || "image/jpeg",
+  };
+  try {
+    return await imageCompression(file, options);
+  } catch {
+    return file;
+  }
+}
+
+async function uploadRecipeImage(familyId: string, recipeId: string, file: File): Promise<string> {
+  const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
+  const path = `${familyId}/${recipeId}-${Date.now()}.${ext}`;
+
+  const { error: upErr } = await supabase.storage
+    .from("recipe-images")
+    .upload(path, file, { upsert: true, contentType: file.type || "image/jpeg" });
+  if (upErr) throw upErr;
+
+  const { data } = supabase.storage.from("recipe-images").getPublicUrl(path);
+  return data.publicUrl;
+}
+
+async function deleteOldRecipeImage(imageUrl: string | null) {
+  if (!imageUrl) return;
+  try {
+    const url = new URL(imageUrl);
+    const pathMatch = url.pathname.match(/\/public\/recipe-images\/(.+)$/);
+    if (pathMatch?.[1]) {
+      await supabase.storage.from("recipe-images").remove([decodeURIComponent(pathMatch[1])]);
+    }
+  } catch {
+    // ignore cleanup errors
+  }
+}
+
 export const Route = createFileRoute("/app/belanja")({
   head: () => ({ meta: [{ title: "Belanja — Rewang" }] }),
   component: BelanjaPage,
@@ -416,11 +458,28 @@ function RecipeTab() {
 
   const upsertRecipe = useMutation({
     mutationFn: async (vals: any) => {
+      const recipeId = vals.id || crypto.randomUUID();
+
+      // Handle image upload
+      let imageUrl = vals.existing_image_url ?? null;
+      if (vals.image_file) {
+        // Delete old image if editing
+        if (vals.id && vals.existing_image_url) {
+          await deleteOldRecipeImage(vals.existing_image_url);
+        }
+        const compressed = await compressImage(vals.image_file);
+        imageUrl = await uploadRecipeImage(familyId!, recipeId, compressed);
+      } else if (vals.remove_image && vals.id && vals.existing_image_url) {
+        // User removed the image
+        await deleteOldRecipeImage(vals.existing_image_url);
+        imageUrl = null;
+      }
+
       const payload: any = {
         family_id: familyId!,
         title: vals.title,
         category: vals.category,
-        image_url: vals.image_url || null,
+        image_url: imageUrl,
         description: vals.description || null,
         last_updated_by: profile?.id,
         last_updated_by_name: profile?.full_name,
@@ -430,6 +489,7 @@ function RecipeTab() {
         const { error } = await supabase.from("recipes").update(payload).eq("id", vals.id);
         if (error) throw error;
       } else {
+        payload.id = recipeId;
         payload.created_by = profile?.id;
         payload.created_by_name = profile?.full_name;
         const { error } = await supabase.from("recipes").insert(payload);
@@ -643,9 +703,12 @@ function RecipeTab() {
 
 function RecipeForm({ initial, categories, onSubmit, busy }: { initial: any; categories: string[]; onSubmit: (v: any) => void; busy: boolean }) {
   const { T } = useLang();
+  const fileRef = useRef<HTMLInputElement>(null);
   const [title, setTitle] = useState(initial?.title ?? "");
   const [category, setCategory] = useState(initial?.category ?? categories[0] ?? "");
-  const [image_url, setImageUrl] = useState(initial?.image_url ?? "");
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(initial?.image_url ?? null); // existing URL or object URL
+  const [removeImage, setRemoveImage] = useState(false);
   const [description, setDescription] = useState(initial?.description ?? "");
 
   // Sync category when categories load after dialog opens
@@ -655,11 +718,38 @@ function RecipeForm({ initial, categories, onSubmit, busy }: { initial: any; cat
     }
   }, [categories, initial, category]);
 
-  // Determine the actual category value to pass to Select (must match a SelectItem)
-  const selectValue = categories.length > 0 && categories.includes(category) ? category : "";
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImageFile(file);
+    setImagePreview(URL.createObjectURL(file));
+    setRemoveImage(false);
+    // Reset input value so picking the same file again triggers onChange
+    if (fileRef.current) fileRef.current.value = "";
+  };
+
+  const handleRemoveImage = () => {
+    setImageFile(null);
+    if (imagePreview?.startsWith("blob:")) {
+      URL.revokeObjectURL(imagePreview);
+    }
+    setImagePreview(null);
+    setRemoveImage(true);
+  };
 
   return (
-    <form onSubmit={(e) => { e.preventDefault(); onSubmit({ id: initial?.id, title, category, image_url, description }); }} className="space-y-3">
+    <form onSubmit={(e) => {
+      e.preventDefault();
+      onSubmit({
+        id: initial?.id,
+        title,
+        category,
+        image_file: imageFile,
+        existing_image_url: initial?.image_url ?? null,
+        remove_image: removeImage,
+        description,
+      });
+    }} className="space-y-3">
       <div><Label>{T("Judul")}</Label><Input required value={title} onChange={(e) => setTitle(e.target.value)} placeholder={T("Nama resep")} /></div>
       <div><Label>{T("Kategori")}</Label>
         {categories.length > 0 ? (
@@ -673,7 +763,38 @@ function RecipeForm({ initial, categories, onSubmit, busy }: { initial: any; cat
           <Input value={category} onChange={(e) => setCategory(e.target.value)} placeholder={T("Nama kategori")} />
         )}
       </div>
-      <div><Label>{T("URL Gambar")}</Label><Input value={image_url} onChange={(e) => setImageUrl(e.target.value)} placeholder="https://..." /></div>
+      <div>
+        <Label>{T("Gambar")}</Label>
+        {imagePreview ? (
+          <div className="relative mt-1.5 rounded-lg overflow-hidden border border-border">
+            <img src={imagePreview} alt="Preview" className="w-full h-40 object-cover" />
+            <button
+              type="button"
+              onClick={handleRemoveImage}
+              className="absolute top-2 right-2 p-1 rounded-full bg-destructive/80 text-white hover:bg-destructive transition"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => fileRef.current?.click()}
+            className="mt-1.5 w-full border-2 border-dashed border-border rounded-lg p-6 flex flex-col items-center justify-center gap-2 text-muted-foreground hover:border-primary hover:text-primary transition-colors cursor-pointer"
+          >
+            <Upload className="h-8 w-8" />
+            <span className="text-sm font-medium">{T("Upload Gambar")}</span>
+            <span className="text-xs">{T("JPG, PNG, WebP (max 5MB)")}</span>
+          </button>
+        )}
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          className="hidden"
+          onChange={handleFileChange}
+        />
+      </div>
       <div><Label>{T("Deskripsi")}</Label><Textarea rows={3} value={description} onChange={(e) => setDescription(e.target.value)} placeholder={T("Bahan, langkah memasak...")} /></div>
       <Button type="submit" className="w-full" disabled={busy}>{T("Simpan")}</Button>
     </form>
