@@ -29,13 +29,14 @@ export const Route = createFileRoute("/app/akun")({
 });
 
 function AkunPage() {
+  const { T } = useLang();
   const { profile, family, signOut } = useAuth();
   const limits = useSubscriptionGate();
   const navigate = useNavigate();
   const handleSignOut = async () => { await signOut(); navigate({ to: "/login" }); };
 
   return (
-    <MainLayout title="Akun">
+    <MainLayout title={T("Akun")}>
       <ProfileSection />
 
       <FamilySection limits={limits} />
@@ -56,6 +57,7 @@ function AkunPage() {
 /* ============== PROFILE ============== */
 
 function ProfileSection() {
+  const { T } = useLang();
   const { profile, refresh, session } = useAuth();
   const fileRef = useRef<HTMLInputElement>(null);
   const [fullName, setFullName] = useState(profile?.full_name ?? "");
@@ -69,7 +71,7 @@ function ProfileSection() {
     setBusy(false);
     if (error) return toast.error(error.message);
     await refresh();
-    toast.success("Profil tersimpan");
+    toast.success(T("Profil tersimpan"));
   };
 
   const uploadAvatar = async (file: File) => {
@@ -84,7 +86,7 @@ function ProfileSection() {
       const { error: dbErr } = await supabase.from("profiles").update({ avatar_url: data.publicUrl }).eq("id", session.user.id);
       if (dbErr) throw dbErr;
       await refresh();
-      toast.success("Avatar diperbarui");
+      toast.success(T("Avatar diperbarui"));
     } catch (e: any) {
       toast.error(e.message);
     } finally {
@@ -112,14 +114,14 @@ function ProfileSection() {
       </div>
       <div className="space-y-2 bg-white/10 backdrop-blur rounded-2xl p-3">
         <div>
-          <Label className="text-primary-foreground/80 text-xs">Nama lengkap</Label>
+          <Label className="text-primary-foreground/80 text-xs">{T("Nama lengkap")}</Label>
           <Input value={fullName} onChange={(e) => setFullName(e.target.value)} className="bg-white/95 text-gray-900" />
         </div>
         <div>
-          <Label className="text-primary-foreground/80 text-xs">No. Telepon</Label>
+          <Label className="text-primary-foreground/80 text-xs">{T("No. Telepon")}</Label>
           <Input value={phone} onChange={(e) => setPhone(e.target.value)} className="bg-white/95 text-gray-900" />
         </div>
-        <Button variant="secondary" onClick={save} disabled={busy} className="w-full">Simpan profil</Button>
+        <Button variant="secondary" onClick={save} disabled={busy} className="w-full">{T("Simpan profil")}</Button>
       </div>
     </section>
   );
@@ -128,12 +130,14 @@ function ProfileSection() {
 /* ============== FAMILY ============== */
 
 function FamilySection({ limits }: { limits?: { canAccessWishlist?: boolean } }) {
+  const { T } = useLang();
   const { family, profile } = useAuth();
   const qc = useQueryClient();
 
   const { data: members = [] } = useQuery({
     queryKey: ["family-members", family?.id],
     enabled: !!family?.id,
+    staleTime: 5 * 60 * 1000,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("profiles").select("id,full_name,email,avatar_url,role,last_active_at")
@@ -146,29 +150,29 @@ function FamilySection({ limits }: { limits?: { canAccessWishlist?: boolean } })
   const copyCode = () => {
     if (!family) return;
     navigator.clipboard.writeText(family.invite_code);
-    toast.success("Kode disalin!");
+    toast.success(T("Kode disalin!"));
   };
 
   return (
     <section className="bg-card border border-border rounded-2xl p-5 mb-4 shadow-soft">
       <div className="flex items-center gap-2 mb-3">
         <Users className="h-4 w-4 text-primary" />
-        <h3 className="font-semibold">Keluarga</h3>
+        <h3 className="font-semibold">{T("Keluarga")}</h3>
       </div>
       <p className="text-sm text-muted-foreground mb-2">{family?.family_name}</p>
 
       {limits?.canAccessWishlist !== false && (
         <div className="bg-gradient-to-br from-accent/40 to-secondary rounded-xl p-3 mb-4">
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Kode undangan</p>
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">{T("Kode undangan")}</p>
           <div className="flex items-center gap-2">
             <p className="font-mono text-2xl tracking-[0.3em] font-bold text-primary flex-1">{family?.invite_code ?? ""}</p>
             <Button size="icon" variant="outline" onClick={copyCode}><Copy className="h-4 w-4" /></Button>
           </div>
-          <p className="text-[11px] text-muted-foreground mt-1.5">Bagikan ke anggota keluarga untuk bergabung</p>
+          <p className="text-[11px] text-muted-foreground mt-1.5">{T("Bagikan ke anggota keluarga untuk bergabung")}</p>
         </div>
       )}
 
-      <p className="text-xs font-semibold text-muted-foreground mb-2">Anggota ({members.length})</p>
+      <p className="text-xs font-semibold text-muted-foreground mb-2">{T("Anggota")} ({members.length})</p>
       <div className="space-y-2">
         {members.map((m: any) => (
           <div key={m.id} className="flex items-center gap-3 bg-secondary/40 rounded-xl p-2.5">
@@ -176,10 +180,10 @@ function FamilySection({ limits }: { limits?: { canAccessWishlist?: boolean } })
               {m.avatar_url ? <img src={m.avatar_url} alt="" className="h-full w-full object-cover" /> : initials(m.full_name)}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">{m.full_name}{m.id === profile?.id && " (kamu)"}</p>
+              <p className="text-sm font-medium truncate">{m.full_name}{m.id === profile?.id && ` ${T("(kamu)")}`}</p>
               <p className="text-[11px] text-muted-foreground truncate">{m.email}</p>
               {m.id !== profile?.id && (
-                <p className="text-[10px] text-muted-foreground/70 truncate">Terakhir online: {timeAgo(m.last_active_at)}</p>
+                <p className="text-[10px] text-muted-foreground/70 truncate">{T("Terakhir online:")} {timeAgo(m.last_active_at)}</p>
               )}
             </div>
           </div>
@@ -194,6 +198,7 @@ function FamilySection({ limits }: { limits?: { canAccessWishlist?: boolean } })
 const CONTACT_CATEGORIES = ["polisi", "pemadam", "rumah_sakit", "wifi", "saudara", "lainnya"];
 
 function EmergencyContactsSection({ familyId }: { familyId?: string }) {
+  const { T } = useLang();
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const [confirmDeleteContact, setConfirmDeleteContact] = useState<any>(null);
@@ -201,6 +206,7 @@ function EmergencyContactsSection({ familyId }: { familyId?: string }) {
   const { data: contacts = [] } = useQuery({
     queryKey: ["emergency_contacts", familyId],
     enabled: !!familyId,
+    staleTime: 5 * 60 * 1000,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("emergency_contacts").select("*").eq("family_id", familyId!).is("deleted_at", null)
@@ -215,7 +221,7 @@ function EmergencyContactsSection({ familyId }: { familyId?: string }) {
       const { error } = await supabase.from("emergency_contacts").insert({ ...v, family_id: familyId! });
       if (error) throw error;
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["emergency_contacts", familyId] }); toast.success("Kontak ditambahkan"); setOpen(false); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["emergency_contacts", familyId] }); toast.success(T("Kontak ditambahkan")); setOpen(false); },
   });
 
   const del = useMutation({
@@ -229,16 +235,16 @@ function EmergencyContactsSection({ familyId }: { familyId?: string }) {
   return (
     <section className="bg-card border border-border rounded-2xl p-5 mb-4 shadow-soft">
       <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2"><Phone className="h-4 w-4 text-primary" /><h3 className="font-semibold">Kontak darurat</h3></div>
+        <div className="flex items-center gap-2"><Phone className="h-4 w-4 text-primary" /><h3 className="font-semibold">{T("Kontak darurat")}</h3></div>
         <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild><Button size="sm" variant="outline"><Plus className="h-3.5 w-3.5 mr-1" />Tambah</Button></DialogTrigger>
+          <DialogTrigger asChild><Button size="sm" variant="outline"><Plus className="h-3.5 w-3.5 mr-1" />{T("Tambah")}</Button></DialogTrigger>
           <DialogContent>
-            <DialogHeader><DialogTitle>Kontak darurat baru</DialogTitle></DialogHeader>
+            <DialogHeader><DialogTitle>{T("Kontak darurat baru")}</DialogTitle></DialogHeader>
             <ContactForm onSubmit={(v) => add.mutate(v)} busy={add.isPending} />
           </DialogContent>
         </Dialog>
       </div>
-      {contacts.length === 0 && <p className="text-xs text-muted-foreground text-center py-3">Belum ada kontak</p>}
+      {contacts.length === 0 && <p className="text-xs text-muted-foreground text-center py-3">{T("Belum ada kontak")}</p>}
       <div className="space-y-2">
         {contacts.map((c: any) => (
           <div key={c.id} className="border border-border rounded-xl p-3 flex items-center gap-3">
@@ -256,8 +262,8 @@ function EmergencyContactsSection({ familyId }: { familyId?: string }) {
       <ConfirmDialog
         open={!!confirmDeleteContact}
         onOpenChange={(v) => { if (!v) setConfirmDeleteContact(null); }}
-        title="Hapus kontak ini?"
-        confirmLabel="Hapus"
+        title={T("Hapus kontak ini?")}
+        confirmLabel={T("Hapus")}
         onConfirm={() => { if (confirmDeleteContact) del.mutate(confirmDeleteContact.id); setConfirmDeleteContact(null); }}
       />
     </section>
@@ -265,23 +271,24 @@ function EmergencyContactsSection({ familyId }: { familyId?: string }) {
 }
 
 function ContactForm({ onSubmit, busy }: { onSubmit: (v: any) => void; busy: boolean }) {
+  const { T } = useLang();
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [category, setCategory] = useState("lainnya");
   const [notes, setNotes] = useState("");
   return (
     <form onSubmit={(e) => { e.preventDefault(); onSubmit({ name, phone, category, notes }); }} className="space-y-3">
-      <div><Label>Nama</Label><Input required value={name} onChange={(e) => setName(e.target.value)} /></div>
-      <div><Label>Telepon</Label><Input required value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="62812..." /></div>
+      <div><Label>{T("Nama")}</Label><Input required value={name} onChange={(e) => setName(e.target.value)} /></div>
+      <div><Label>{T("Telepon")}</Label><Input required value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="62812..." /></div>
       <div>
-        <Label>Kategori</Label>
+        <Label>{T("Kategori")}</Label>
         <Select value={category} onValueChange={setCategory}>
           <SelectTrigger><SelectValue /></SelectTrigger>
           <SelectContent>{CONTACT_CATEGORIES.map((c) => <SelectItem key={c} value={c} className="capitalize">{c.replace("_", " ")}</SelectItem>)}</SelectContent>
         </Select>
       </div>
-      <div><Label>Catatan (opsional)</Label><Textarea rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} /></div>
-      <Button type="submit" className="w-full" disabled={busy}>Simpan</Button>
+      <div><Label>{T("Catatan (opsional)")}</Label><Textarea rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} /></div>
+      <Button type="submit" className="w-full" disabled={busy}>{T("Simpan")}</Button>
     </form>
   );
 }
@@ -291,6 +298,7 @@ function ContactForm({ onSubmit, busy }: { onSubmit: (v: any) => void; busy: boo
 const DOC_CATEGORIES = ["KK", "BPJS", "STNK", "tagihan", "sertifikat", "lainnya"];
 
 function DocumentsSection({ familyId }: { familyId?: string }) {
+  const { T } = useLang();
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const [confirmDeleteDoc, setConfirmDeleteDoc] = useState<any>(null);
@@ -298,6 +306,7 @@ function DocumentsSection({ familyId }: { familyId?: string }) {
   const { data: docs = [] } = useQuery({
     queryKey: ["documents", familyId],
     enabled: !!familyId,
+    staleTime: 5 * 60 * 1000,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("household_documents").select("*").eq("family_id", familyId!).is("deleted_at", null)
@@ -312,7 +321,7 @@ function DocumentsSection({ familyId }: { familyId?: string }) {
       const { error } = await supabase.from("household_documents").insert({ ...v, family_id: familyId! });
       if (error) throw error;
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["documents", familyId] }); toast.success("Dokumen ditambahkan"); setOpen(false); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["documents", familyId] }); toast.success(T("Dokumen ditambahkan")); setOpen(false); },
   });
 
   const del = useMutation({
@@ -330,16 +339,16 @@ function DocumentsSection({ familyId }: { familyId?: string }) {
   return (
     <section className="bg-card border border-border rounded-2xl p-5 mb-4 shadow-soft">
       <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2"><FileText className="h-4 w-4 text-primary" /><h3 className="font-semibold">Dokumen rumah</h3></div>
+        <div className="flex items-center gap-2"><FileText className="h-4 w-4 text-primary" /><h3 className="font-semibold">{T("Dokumen rumah")}</h3></div>
         <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild><Button size="sm" variant="outline"><Plus className="h-3.5 w-3.5 mr-1" />Tambah</Button></DialogTrigger>
+          <DialogTrigger asChild><Button size="sm" variant="outline"><Plus className="h-3.5 w-3.5 mr-1" />{T("Tambah")}</Button></DialogTrigger>
           <DialogContent>
-            <DialogHeader><DialogTitle>Tambah dokumen</DialogTitle></DialogHeader>
+            <DialogHeader><DialogTitle>{T("Tambah dokumen")}</DialogTitle></DialogHeader>
             <DocForm onSubmit={(v) => add.mutate(v)} busy={add.isPending} />
           </DialogContent>
         </Dialog>
       </div>
-      {docs.length === 0 && <p className="text-xs text-muted-foreground text-center py-3">Belum ada dokumen. Tempel link Google Drive untuk arsip cepat.</p>}
+      {docs.length === 0 && <p className="text-xs text-muted-foreground text-center py-3">{T("Belum ada dokumen. Tempel link Google Drive untuk arsip cepat.")}</p>}
       <div className="space-y-3">
         {Object.entries(grouped).map(([cat, list]) => (
           <div key={cat}>
@@ -367,8 +376,8 @@ function DocumentsSection({ familyId }: { familyId?: string }) {
       <ConfirmDialog
         open={!!confirmDeleteDoc}
         onOpenChange={(v) => { if (!v) setConfirmDeleteDoc(null); }}
-        title="Hapus dokumen ini?"
-        confirmLabel="Hapus"
+        title={T("Hapus dokumen ini?")}
+        confirmLabel={T("Hapus")}
         onConfirm={() => { if (confirmDeleteDoc) del.mutate(confirmDeleteDoc.id); setConfirmDeleteDoc(null); }}
       />
     </section>
@@ -376,23 +385,24 @@ function DocumentsSection({ familyId }: { familyId?: string }) {
 }
 
 function DocForm({ onSubmit, busy }: { onSubmit: (v: any) => void; busy: boolean }) {
+  const { T } = useLang();
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState("lainnya");
   const [drive_url, setUrl] = useState("");
   const [notes, setNotes] = useState("");
   return (
     <form onSubmit={(e) => { e.preventDefault(); onSubmit({ title, category, drive_url, notes }); }} className="space-y-3">
-      <div><Label>Judul</Label><Input required value={title} onChange={(e) => setTitle(e.target.value)} /></div>
+      <div><Label>{T("Judul")}</Label><Input required value={title} onChange={(e) => setTitle(e.target.value)} /></div>
       <div>
-        <Label>Kategori</Label>
+        <Label>{T("Kategori")}</Label>
         <Select value={category} onValueChange={setCategory}>
           <SelectTrigger><SelectValue /></SelectTrigger>
           <SelectContent>{DOC_CATEGORIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
         </Select>
       </div>
-      <div><Label>Link Google Drive</Label><Input value={drive_url} onChange={(e) => setUrl(e.target.value)} placeholder="https://drive.google.com/..." /></div>
-      <div><Label>Catatan (opsional)</Label><Textarea rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} /></div>
-      <Button type="submit" className="w-full" disabled={busy}>Simpan</Button>
+      <div><Label>{T("Link Google Drive")}</Label><Input value={drive_url} onChange={(e) => setUrl(e.target.value)} placeholder="https://drive.google.com/..." /></div>
+      <div><Label>{T("Catatan (opsional)")}</Label><Textarea rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} /></div>
+      <Button type="submit" className="w-full" disabled={busy}>{T("Simpan")}</Button>
     </form>
   );
 }
@@ -400,9 +410,11 @@ function DocForm({ onSubmit, busy }: { onSubmit: (v: any) => void; busy: boolean
 /* ============== WISHLIST SHORTCUT ============== */
 
 function WishlistShortcut({ familyId }: { familyId?: string }) {
+  const { T } = useLang();
   const { data: count = 0 } = useQuery({
     queryKey: ["wishlist-count", familyId],
     enabled: !!familyId,
+    staleTime: 5 * 60 * 1000,
     queryFn: async () => {
       const { count: c } = await supabase.from("wishlist_items").select("*", { count: "exact", head: true })
         .eq("family_id", familyId!).is("deleted_at", null).is("purchased_at", null);
@@ -417,8 +429,8 @@ function WishlistShortcut({ familyId }: { familyId?: string }) {
           <Heart className="h-5 w-5 text-primary" />
         </div>
         <div className="flex-1">
-          <p className="font-semibold">Wishlist</p>
-          <p className="text-xs text-muted-foreground">{count} item menunggu dibeli</p>
+          <p className="font-semibold">{T("Wishlist")}</p>
+          <p className="text-xs text-muted-foreground">{count} {T("item menunggu dibeli")}</p>
         </div>
         <ExternalLink className="h-4 w-4 text-muted-foreground" />
       </div>
@@ -526,8 +538,8 @@ function SettingsSection({ onSignOut }: { onSignOut: () => void }) {
             </form>
           </DialogContent>
         </Dialog>
-        {/* Notifications */}
-        <div className="flex items-center justify-between p-3 rounded-xl hover:bg-secondary/40">
+        {/* TODO: Notifications & Bill Reminders — pending backend wiring */}
+        {/* <div className="flex items-center justify-between p-3 rounded-xl hover:bg-secondary/40">
           <div>
             <p className="text-sm font-medium">{T("Pengingat tagihan")}</p>
             <p className="text-[11px] text-muted-foreground">{T("Tampilkan tagihan jatuh tempo")}</p>
@@ -540,7 +552,7 @@ function SettingsSection({ onSignOut }: { onSignOut: () => void }) {
             <p className="text-[11px] text-muted-foreground">{T("Update keluarga di feed")}</p>
           </div>
           <Switch checked={notif} onCheckedChange={setNotif} />
-        </div>
+        </div> */}
         <div className="flex items-center justify-between p-3 rounded-xl hover:bg-secondary/40">
           <div className="flex items-center gap-2">
             <ShieldCheck className="h-4 w-4 text-success" />
