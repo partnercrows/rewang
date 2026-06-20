@@ -234,7 +234,7 @@ function TodayTasksSimple({ familyId }: { familyId: string }) {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["daily-tasks", familyId] });
-      toast.success("Tugas dihapus");
+      toast.success(T("Tugas dihapus"));
     },
   });
 
@@ -331,10 +331,10 @@ function TodayTasksSimple({ familyId }: { familyId: string }) {
       {/* Add task dialog — controlled so it closes on success; gate by daily limit */}
       {limits.tier === "starter" && tasks.filter((t: any) => t.created_at?.slice(0, 10) === todayStr).length >= limits.maxTasksPerDay ? (
         <div className="mt-2 rounded-xl bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 p-3 text-center">
-          <p className="text-xs font-semibold text-amber-700 dark:text-amber-300">Batas 5 tugas/hari tercapai</p>
-          <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-0.5">Upgrade ke Family untuk tugas tak terbatas</p>
+          <p className="text-xs font-semibold text-amber-700 dark:text-amber-300">{T("Batas 5 tugas/hari tercapai", "Daily task limit reached (5)")}</p>
+          <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-0.5">{T("Upgrade ke Family untuk tugas tak terbatas", "Upgrade to Family for unlimited tasks")}</p>
           <Button asChild size="sm" variant="outline" className="mt-2 rounded-xl text-xs">
-            <Link to="/aktivasi">Upgrade →</Link>
+            <Link to="/aktivasi">{T("Upgrade", "Upgrade")} →</Link>
           </Button>
         </div>
       ) : (
@@ -344,8 +344,8 @@ function TodayTasksSimple({ familyId }: { familyId: string }) {
       <ConfirmDialog
         open={!!confirmDeleteTask}
         onOpenChange={(v) => { if (!v) setConfirmDeleteTask(null); }}
-        title="Hapus tugas ini?"
-        confirmLabel="Hapus"
+        title={T("Hapus tugas ini?")}
+        confirmLabel={T("Hapus")}
         onConfirm={() => { if (confirmDeleteTask) deleteTask.mutate(confirmDeleteTask.id); setConfirmDeleteTask(null); }}
         isLoading={deleteTask.isPending}
       />
@@ -398,12 +398,12 @@ function AddTaskSimpleForm({ familyId, profile, onSuccess }: { familyId: string;
       priority: "normal",
     });
     if (error) {
-      toast.error("Gagal menambah tugas");
+      toast.error(T("Gagal menambah tugas"));
       setBusy(false);
       return;
     }
     // Success — close dialog & reset form FIRST
-    toast.success("Tugas ditambahkan");
+    toast.success(T("Tugas ditambahkan"));
     setTitle("");
     setIsRecurring(false);
     onSuccess();
@@ -461,6 +461,7 @@ function SummaryTile({ to, Icon, label, value, bg, fg, iconBg }: { to: string; I
 
 function UpcomingBillCard({ bill, familyId }: { bill: any; familyId: string }) {
   const qc = useQueryClient();
+  const { T } = useLang();
   const { profile } = useAuth();
   const days = daysUntil(bill.due_date);
   const overdue = days < 0;
@@ -478,7 +479,7 @@ function UpcomingBillCard({ bill, familyId }: { bill: any; familyId: string }) {
       qc.invalidateQueries({ queryKey: ["next-bill"] });
       qc.invalidateQueries({ queryKey: ["beranda-stats"] });
       qc.invalidateQueries({ queryKey: ["bills"] });
-      toast.success("Tagihan dilunasi");
+      toast.success(T("Tagihan dilunasi"));
     },
   });
 
@@ -495,7 +496,7 @@ function UpcomingBillCard({ bill, familyId }: { bill: any; familyId: string }) {
       <div className="relative">
         <div className="flex items-center gap-1.5 mb-1 opacity-90">
           <Calendar className="h-3.5 w-3.5" />
-          <p className="text-[10px] uppercase tracking-widest font-semibold">Tagihan terdekat{bill.is_recurring ? " · berulang" : ""}</p>
+      <p className="text-[10px] uppercase tracking-widest font-semibold">{T("Tagihan terdekat", "Upcoming bill")}{bill.is_recurring ? ` · ${T("berulang", "recurring")}` : ""}</p>
         </div>
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
@@ -504,25 +505,25 @@ function UpcomingBillCard({ bill, familyId }: { bill: any; familyId: string }) {
           </div>
           <div className="text-right shrink-0">
             <p className="text-2xl font-extrabold leading-none">{overdue ? `-${-days}` : days === 0 ? "0" : days}</p>
-            <p className="text-[10px] uppercase tracking-wider opacity-90 mt-1">{overdue ? "hari telat" : days === 0 ? "hari ini" : "hari lagi"}</p>
+            <p className="text-[10px] uppercase tracking-wider opacity-90 mt-1">{overdue ? T("hari telat", "days late") : days === 0 ? T("hari ini", "today") : T("hari lagi", "days left")}</p>
           </div>
         </div>
         {dueToday && (
           <div className="mt-3 rounded-xl bg-amber-500/20 text-amber-950 dark:text-amber-100 text-[11px] font-semibold px-3 py-1.5 text-center border border-amber-400/40">
-            ⏰ Jatuh tempo hari ini — jangan lupa dibayar!
+            ⏰ {T("Jatuh tempo hari ini — jangan lupa dibayar!", "Due today — don't forget to pay!")}
           </div>
         )}
         {overdue && (
           <div className="mt-3 rounded-xl bg-rose-500/20 text-rose-950 dark:text-rose-100 text-[11px] font-semibold px-3 py-1.5 text-center border border-rose-400/40">
-            🔴 SUDAH TERLAMBAT {days} hari — segera lunasi!
+            🔴 {T("SUDAH TERLAMBAT {n} hari — segera lunasi!", "OVERDUE {n} days — settle immediately!").replace("{n}", String(Math.abs(days)))}
           </div>
         )}
         <div className="flex gap-2 mt-4">
           <Button size="sm" variant="secondary" className="flex-1" onClick={() => pay.mutate()} disabled={pay.isPending}>
-            <CheckCircle2 className="h-4 w-4 mr-1" /> Lunasi
+            <CheckCircle2 className="h-4 w-4 mr-1" /> {T("Lunasi", "Pay")}
           </Button>
           <Button size="sm" variant="outline" className="flex-1 bg-transparent border-white/40 text-white hover:bg-white/15 hover:text-white" asChild>
-            <Link to="/app/keuangan">Detail</Link>
+            <Link to="/app/keuangan">{T("Detail", "Details")}</Link>
           </Button>
         </div>
       </div>
@@ -534,6 +535,7 @@ const AGENDA_ICON: Record<string, any> = { ulang_tahun: Cake, kajian: BookOpen, 
 const AGENDA_EMOJI: Record<string, string> = { ulang_tahun: "🎂", kajian: "🕌", sekolah: "🎓", janji: "📌", pengingat: "🔔" };
 
 function AgendaSection({ familyId }: { familyId: string }) {
+  const { T } = useLang();
   const { data: agenda = [] } = useQuery({
     queryKey: ["agenda", familyId],
     enabled: !!familyId,
@@ -558,7 +560,7 @@ function AgendaSection({ familyId }: { familyId: string }) {
     <>
       {agenda.length === 0 ? (
         <p className="text-xs text-muted-foreground py-5 text-center bg-card border border-dashed border-border rounded-2xl">
-          Belum ada agenda bulan ini
+          {T("Belum ada agenda bulan ini", "No agenda this month")}
         </p>
       ) : (
         <div className="space-y-2">
@@ -576,7 +578,7 @@ function AgendaSection({ familyId }: { familyId: string }) {
                   <p className="text-[11px] text-muted-foreground capitalize">{String(a.event_type).replace("_", " ")}</p>
                 </div>
                 <span className="text-xs font-semibold text-primary shrink-0">
-                  {d === 0 ? "Hari ini" : d === 1 ? "Besok" : `${d} hari lagi`}
+                  {d === 0 ? T("Hari ini", "Today") : d === 1 ? T("Besok", "Tomorrow") : `${d} ${T("hari lagi", "days left")}`}
                 </span>
               </div>
             );
@@ -584,13 +586,14 @@ function AgendaSection({ familyId }: { familyId: string }) {
         </div>
       )}
       <Button asChild variant="outline" size="sm" className="w-full mt-3 rounded-xl">
-        <Link to="/app/kalender"><Calendar className="h-4 w-4 mr-2" /> Lihat kalender</Link>
+        <Link to="/app/kalender"><Calendar className="h-4 w-4 mr-2" /> {T("Lihat kalender", "View calendar")}</Link>
       </Button>
     </>
   );
 }
 
 function QuickNotesCard({ familyId }: { familyId: string }) {
+  const { T } = useLang();
   const qc = useQueryClient();
   const { profile } = useAuth();
   const [text, setText] = useState("");
@@ -641,11 +644,11 @@ function QuickNotesCard({ familyId }: { familyId: string }) {
   return (
     <div>
       <form onSubmit={(e) => { e.preventDefault(); add.mutate(); }} className="flex gap-2 mb-3">
-        <Input value={text} onChange={(e) => setText(e.target.value)} placeholder="Tulis catatan singkat..." className="bg-card" />
-        <Button type="submit" size="sm" disabled={!text.trim() || add.isPending}>Tambah</Button>
+        <Input value={text} onChange={(e) => setText(e.target.value)} placeholder={T("Tulis catatan singkat...", "Write a short note...")} className="bg-card" />
+        <Button type="submit" size="sm" disabled={!text.trim() || add.isPending}>{T("Tambah", "Add")}</Button>
       </form>
       {notes.length === 0 ? (
-        <p className="text-xs text-muted-foreground text-center py-4 bg-card border border-dashed border-border rounded-2xl">Belum ada catatan</p>
+        <p className="text-xs text-muted-foreground text-center py-4 bg-card border border-dashed border-border rounded-2xl">{T("Belum ada catatan", "No notes yet")}</p>
       ) : (
         <div className="grid grid-cols-2 gap-2 will-change-transform">
           {notes.map((n: any) => {
@@ -679,8 +682,8 @@ function QuickNotesCard({ familyId }: { familyId: string }) {
       <ConfirmDialog
         open={!!confirmDeleteNote}
         onOpenChange={(v) => { if (!v) setConfirmDeleteNote(null); }}
-        title="Hapus catatan ini?"
-        confirmLabel="Hapus"
+        title={T("Hapus catatan ini?")}
+        confirmLabel={T("Hapus")}
         onConfirm={() => { if (confirmDeleteNote) del.mutate(confirmDeleteNote.id); setConfirmDeleteNote(null); }}
       />
     </div>
@@ -766,14 +769,15 @@ function RecipePreview({ familyId }: { familyId: string }) {
 }
 
 function Achievements({ stats }: { stats: any }) {
+  const { T } = useLang();
   const items = [
-    { ok: (stats?.monthTotal ?? 0) > 0 && (stats?.monthUnpaid ?? 0) === 0, Icon: Trophy, text: "Semua tagihan bulan ini lunas" },
-    { ok: (stats?.habis ?? 0) === 0, Icon: Sparkles, text: "Tidak ada stok habis minggu ini" },
-    { ok: (stats?.hutangCount ?? 0) === 0, Icon: Zap, text: "Tidak ada hutang aktif" },
+    { ok: (stats?.monthTotal ?? 0) > 0 && (stats?.monthUnpaid ?? 0) === 0, Icon: Trophy, text: T("Semua tagihan bulan ini lunas", "All bills paid this month") },
+    { ok: (stats?.habis ?? 0) === 0, Icon: Sparkles, text: T("Tidak ada stok habis minggu ini", "No out-of-stock items this week") },
+    { ok: (stats?.hutangCount ?? 0) === 0, Icon: Zap, text: T("Tidak ada hutang aktif", "No active debts") },
   ].filter((i) => i.ok);
 
   if (items.length === 0) {
-    return <p className="text-xs text-muted-foreground text-center py-4 bg-card border border-dashed border-border rounded-2xl">Belum ada pencapaian — terus rapikan rumah ya 💪</p>;
+    return <p className="text-xs text-muted-foreground text-center py-4 bg-card border border-dashed border-border rounded-2xl">{T("Belum ada pencapaian — terus rapikan rumah ya 💪", "No achievements yet — keep tidying up 💪")}</p>;
   }
 
   return (

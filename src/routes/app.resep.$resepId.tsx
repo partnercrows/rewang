@@ -88,6 +88,7 @@ function ResepDetailPage() {
   const { data: recipe, isLoading } = useQuery({
     queryKey: ["recipe", resepId],
     enabled: !!resepId,
+    staleTime: 2 * 60 * 1000,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("recipes")

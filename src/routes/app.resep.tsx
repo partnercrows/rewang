@@ -110,7 +110,7 @@ function ResepListPage() {
   const { data: recipeCount, isLoading: countLoading } = useQuery({
     queryKey: ["recipes", familyId, "count"],
     enabled: !!familyId,
-    staleTime: 0,
+    staleTime: 5 * 60 * 1000,
     queryFn: async () => {
       const { count, error } = await supabase
         .from("recipes")
@@ -159,6 +159,7 @@ function ResepListPage() {
       return lastPage.nextPage < totalPages ? lastPage.nextPage : undefined;
     },
     initialPageParam: 0,
+    staleTime: 5 * 60 * 1000,
   });
 
   const allItems = useMemo(() => data?.pages.flatMap((p) => p.data) ?? [], [data]);
@@ -329,7 +330,7 @@ function ResepListPage() {
                 filterCat === c ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border text-muted-foreground"
               )}
             >
-              {c}
+              {T(c)}
             </button>
           ))}
         </div>
@@ -368,7 +369,7 @@ function ResepListPage() {
                 )}
               </div>
               <div className="p-2.5">
-                <p className="text-xs text-primary font-semibold mb-0.5">{item.category}</p>
+                <p className="text-xs text-primary font-semibold mb-0.5">{T(item.category)}</p>
                 <p className="text-sm font-bold line-clamp-2 leading-snug">{item.title}</p>
                 {item.description && (
                   <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{item.description}</p>
@@ -412,7 +413,7 @@ function ResepListPage() {
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {DEFAULT_CATEGORIES.map((c) => (
-                    <SelectItem key={c} value={c}>{c}</SelectItem>
+                    <SelectItem key={c} value={c}>{T(c)}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>

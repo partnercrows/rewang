@@ -179,11 +179,11 @@ function FeedPage() {
             >
               <CalendarIcon className="h-3.5 w-3.5" />
               {dateRange?.from && dateRange?.to
-                ? `${dateRange.from.toLocaleDateString("id", { day: "numeric", month: "short" })} - ${dateRange.to.toLocaleDateString("id", { day: "numeric", month: "short" })}`
+                ? `${dateRange.from.toLocaleDateString(lang, { day: "numeric", month: "short" })} - ${dateRange.to.toLocaleDateString(lang, { day: "numeric", month: "short" })}`
                 : dateRange?.from
-                  ? `≥ ${dateRange.from.toLocaleDateString("id", { day: "numeric", month: "short" })}`
+                  ? `≥ ${dateRange.from.toLocaleDateString(lang, { day: "numeric", month: "short" })}`
                   : dateRange?.to
-                    ? `≤ ${dateRange.to.toLocaleDateString("id", { day: "numeric", month: "short" })}`
+                    ? `≤ ${dateRange.to.toLocaleDateString(lang, { day: "numeric", month: "short" })}`
                     : T("Tanggal")}
             </Button>
           </PopoverTrigger>

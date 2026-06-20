@@ -817,7 +817,7 @@ function BillCard({ bill, onDelete, onPay, onDeletePrompt }: { bill: any; onDele
         <div className="min-w-0">
           <div className="flex items-center gap-2">
             <h3 className={cn("font-semibold text-sm truncate", isPaid && "line-through text-muted-foreground")}>{bill.bill_name}</h3>
-            {bill.is_recurring && <span className="text-[10px] text-blue-600 dark:text-blue-400 font-medium">{bill.recurrence_interval === "yearly" ? "Tiap Tahun" : "Tiap Bulan"}</span>}
+            {bill.is_recurring && <span className="text-[10px] text-blue-600 dark:text-blue-400 font-medium">{bill.recurrence_interval === "yearly" ? T("Tiap Tahun") : T("Tiap Bulan")}</span>}
             {bill.reminder_days && !bill.is_paid && days >= 1 && days <= bill.reminder_days && (<span className="inline-flex items-center gap-0.5 text-[10px] text-amber-600 dark:text-amber-400 font-medium"><BellRing className="h-3 w-3" /> H-{days}</span>)}
           </div>
           <p className="text-lg font-bold mt-0.5">{formatRupiah(bill.nominal)}</p>
