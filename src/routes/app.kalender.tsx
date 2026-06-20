@@ -6,32 +6,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState, useMemo } from "react";
 import { toast } from "sonner";
 import { Plus, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-// Indonesian national holidays 2026
-const LIBUR_NASIONAL: Record<string, string> = {
-  "2026-01-01": "Tahun Baru 2026 Masehi",
-  "2026-01-25": "Tahun Baru Imlek 2577 Kongzili",
-  "2026-02-18": "Isra Mi'raj Nabi Muhammad SAW",
-  "2026-03-20": "Hari Raya Nyepi Tahun Baru Saka 1948",
-  "2026-03-21": "Idul Fitri 1447 H",
-  "2026-03-22": "Idul Fitri 1447 H",
-  "2026-04-03": "Wafat Isa Al Masih",
-  "2026-05-01": "Hari Buruh Internasional",
-  "2026-05-08": "Kenaikan Isa Al Masih",
-  "2026-05-28": "Idul Adha 1447 H",
-  "2026-05-31": "Hari Raya Waisak 2570",
-  "2026-06-01": "Hari Lahir Pancasila",
-  "2026-06-17": "Tahun Baru Islam 1448 H",
-  "2026-08-17": "Hari Kemerdekaan RI",
-  "2026-08-26": "Maulid Nabi Muhammad SAW",
-  "2026-12-25": "Hari Raya Natal",
-};
+import { LIBUR_NASIONAL } from "@/lib/holidays";
 
 export const Route = createFileRoute("/app/kalender")({
   head: () => ({ meta: [{ title: "Kalender — Rewang" }] }),
@@ -154,11 +136,23 @@ function KalenderPage() {
 
   return (
     <MainLayout title={T("Kalender")}>
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-4 gap-1">
         <Button variant="ghost" size="icon" onClick={() => { if (month === 0) { setMonth(11); setYear(year - 1); } else setMonth(month - 1); }}>
           <ChevronLeft className="h-5 w-5" />
         </Button>
-        <h2 className="text-lg font-bold">{monthNames[month]} {year}</h2>
+        <div className="flex items-center gap-1.5">
+          <h2 className="text-lg font-bold">{monthNames[month]}</h2>
+          <Select value={String(year)} onValueChange={(v) => setYear(Number(v))}>
+            <SelectTrigger className="h-8 w-[5.5rem] rounded-md border-0 bg-secondary px-2 text-sm font-semibold cursor-pointer focus:ring-0">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {Array.from({ length: 41 }, (_, i) => 2010 + i).map((y) => (
+                <SelectItem key={y} value={String(y)}>{y}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
         <Button variant="ghost" size="icon" onClick={() => { if (month === 11) { setMonth(0); setYear(year + 1); } else setMonth(month + 1); }}>
           <ChevronRight className="h-5 w-5" />
         </Button>
