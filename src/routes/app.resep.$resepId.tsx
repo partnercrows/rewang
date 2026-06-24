@@ -208,36 +208,22 @@ function ResepDetailPage() {
 
   return (
     <MainLayout title={T("Detail Resep")}>
-      {/* Back button */}
-      <Button variant="ghost" size="sm" className="mb-3 -ml-2" onClick={() => navigate({ to: "/app/resep" as any })}>
-        <ChevronLeft className="h-4 w-4 mr-1" />
-        {T("Kembali ke Resep")}
-      </Button>
-
-      {/* Image with overlay */}
-      {recipe.image_url ? (
-        <div className="relative aspect-video rounded-xl overflow-hidden mb-4 bg-muted">
-          <img src={recipe.image_url} alt={recipe.title} className="absolute inset-0 w-full h-full object-cover" />
-          <div className="absolute inset-0 flex flex-col justify-end p-4 bg-gradient-to-t from-black/60 to-transparent">
-            <span className="inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold bg-primary/80 text-white w-fit mb-1.5">
-              {recipe.category}
-            </span>
-            <h1 className="text-lg font-extrabold text-white drop-shadow-lg">{recipe.title}</h1>
-            <div className="flex items-center gap-2 text-xs text-white/80 mt-1">
-              <span>{recipe.created_by_name ?? T("Anggota")}</span>
-              <span>·</span>
-              <span>{formatDistanceToNow(new Date(recipe.created_at!), { addSuffix: true, locale: idLocale })}</span>
-              {recipe.updated_at && recipe.updated_at !== recipe.created_at && (
-                <>
-                  <span>·</span>
-                <span>{T("Diperbarui")} {formatDistanceToNow(new Date(recipe.updated_at!), { addSuffix: true, locale: idLocale })}</span>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-      ) : (
         <>
+          <Button variant="ghost" size="sm" className="mb-3 -ml-2" onClick={() => navigate({ to: "/app/resep" as any })}>
+            <ChevronLeft className="h-4 w-4 mr-1" />
+            {T("Kembali ke Resep")}
+          </Button>
+
+          {/* Gambar (tanpa overlay, full terlihat) */}
+          {recipe.image_url && (
+            <div className="mb-4">
+              <div className="rounded-xl overflow-hidden bg-muted">
+                <img src={recipe.image_url} alt={recipe.title ?? ""} className="w-full h-auto object-cover rounded-xl" />
+              </div>
+            </div>
+          )}
+
+          {/* Info: kategori, judul, meta */}
           <span className="inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold bg-primary/10 text-primary mb-2">
             {recipe.category}
           </span>
@@ -253,29 +239,34 @@ function ResepDetailPage() {
               </>
             )}
           </div>
+
+          {/* Divider */}
+          <hr className="border-t border-border my-5" />
+
+          {/* Description section */}
+          <div className="bg-card border border-border rounded-xl p-4 mb-6">
+            <h3 className="text-sm font-semibold text-primary mb-3">{T("Bahan & Langkah")}</h3>
+            {recipe.description ? (
+              <div className="prose prose-sm max-w-full break-words">
+                <p className="text-sm leading-relaxed whitespace-pre-wrap">{recipe.description}</p>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground italic">{T("Belum ada deskripsi")}</p>
+            )}
+          </div>
+
+          {/* Action buttons */}
+          <div className="flex gap-2 mt-4 mb-20">
+            <Button variant="outline" size="sm" onClick={openEditDialog}>
+              <Edit2 className="h-4 w-4 mr-1" />
+              {T("Edit")}
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleDelete} disabled={deleteMutation.isPending} className="text-destructive border-destructive/30 hover:bg-destructive/10">
+              <Trash2 className="h-4 w-4 mr-1" />
+              {deleteMutation.isPending ? T("Menghapus...") : T("Hapus")}
+            </Button>
+          </div>
         </>
-      )}
-
-      {/* Description */}
-      {recipe.description ? (
-        <div className="prose prose-sm max-w-full overflow-hidden mb-6">
-          <p className="text-sm leading-relaxed whitespace-pre-wrap">{recipe.description}</p>
-        </div>
-      ) : (
-        <p className="text-sm text-muted-foreground italic mb-6">{T("Belum ada deskripsi")}</p>
-      )}
-
-      {/* Action buttons */}
-      <div className="flex gap-2 mt-4">
-        <Button variant="outline" size="sm" onClick={openEditDialog}>
-          <Edit2 className="h-4 w-4 mr-1" />
-          {T("Edit")}
-        </Button>
-        <Button variant="outline" size="sm" onClick={handleDelete} disabled={deleteMutation.isPending} className="text-destructive border-destructive/30 hover:bg-destructive/10">
-          <Trash2 className="h-4 w-4 mr-1" />
-          {deleteMutation.isPending ? T("Menghapus...") : T("Hapus")}
-        </Button>
-      </div>
 
       {/* Edit Dialog */}
       <Dialog open={editOpen} onOpenChange={(v) => { setEditOpen(v); if (!v) { setFormImageFile(null); setFormImagePreview(null); } }}>
@@ -336,7 +327,8 @@ function ResepDetailPage() {
                 value={formDescription}
                 onChange={(e) => setFormDescription(e.target.value)}
                 placeholder={T("Bahan, langkah, dsb...")}
-                rows={8}
+                rows={20}
+                className="min-h-[400px]"
               />
             </div>
           </div>

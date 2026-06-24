@@ -43,7 +43,7 @@ export function CTASection() {
         </h2>
 
         <p className="mt-6 text-lg text-white/80 max-w-2xl mx-auto leading-relaxed">
-          Bergabung dengan ribuan keluarga yang sudah merasakan kemudahan mengatur rumah tangga
+          Bergabung dan menjadi keluarga untuk merasakan kemudahan mengatur rumah tangga
           dengan Rewang. Satu aplikasi untuk semua kebutuhan keluarga.
         </p>
 

@@ -85,7 +85,7 @@ function BelanjaPage() {
 
   return (
     <MainLayout title={T("Belanja")}>
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
+      <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); window.history.replaceState(null, "", `?tab=${v}`); }}>
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="stock" className="data-[state=active]:font-extrabold data-[state=active]:scale-[1.02] data-[state=active]:shadow-md transition-all"><Package className="h-4 w-4 mr-2" />{T("Stok")}</TabsTrigger>
           <TabsTrigger value="recipe" className="data-[state=active]:font-extrabold data-[state=active]:scale-[1.02] data-[state=active]:shadow-md transition-all"><UtensilsCrossed className="h-4 w-4 mr-2" />{T("Resep")}</TabsTrigger>
@@ -639,44 +639,38 @@ function RecipeTab() {
         <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto p-0">
           {detail && (
             <>
-              {detail.image_url ? (
-                <div className="relative aspect-video overflow-hidden rounded-t-lg">
-                  <img src={detail.image_url} alt={detail.title} className="absolute inset-0 w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent flex flex-col justify-end p-4">
-                    {detail.category && (
-                      <span className="inline-block w-fit px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-white/20 backdrop-blur text-white mb-1.5">
-                        {detail.category}
-                      </span>
-                    )}
-                    <h2 className="text-xl font-bold text-white">{detail.title}</h2>
-                  </div>
+              {detail.image_url && (
+                <div className="aspect-video overflow-hidden rounded-t-lg bg-muted">
+                  <img src={detail.image_url} alt={detail.title} className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
                 </div>
-              ) : (
-                <DialogHeader className="space-y-1.5 p-4 pb-0">
-                  {detail.category && (
-                    <span className="inline-block w-fit px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-primary/10 text-primary">
-                      {detail.category}
-                    </span>
-                  )}
-                  <DialogTitle className="text-lg">{detail.title}</DialogTitle>
-                </DialogHeader>
               )}
-              <div className="space-y-3 p-4">
-                {detail.description && (
-                  <div>
-                    <p className="text-xs font-semibold text-muted-foreground mb-1">{T("Deskripsi")}</p>
-                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">{detail.description}</p>
-                  </div>
+              <div className="p-4 space-y-1.5">
+                {detail.category && (
+                  <span className="inline-block w-fit px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-primary/10 text-primary">
+                    {detail.category}
+                  </span>
                 )}
-                {detail.last_updated_by_name && (
-                  <p className="text-[11px] text-muted-foreground">{T("Diupdate oleh")} {detail.last_updated_by_name}</p>
-                )}
+                <h2 className="text-xl font-bold">{detail.title}</h2>
                 <p className="text-[11px] text-muted-foreground">
                   {T("Dibuat")} {formatDistanceToNow(new Date(detail.created_at), { addSuffix: true, locale: idLocale })}
                   {detail.updated_at && detail.updated_at !== detail.created_at && ` · ${T("Diupdate")} ${formatDistanceToNow(new Date(detail.updated_at), { addSuffix: true, locale: idLocale })}`}
                 </p>
+                {detail.last_updated_by_name && (
+                  <p className="text-[11px] text-muted-foreground">{T("Diupdate oleh")} {detail.last_updated_by_name}</p>
+                )}
               </div>
-              <div className="flex gap-2 p-4 pt-0">
+              {detail.description && (
+                <>
+                  <hr className="mx-4 border-border" />
+                  <div className="px-4 pb-2 pt-1">
+                    <p className="text-xs font-semibold text-muted-foreground mb-2">{T("Bahan & Langkah")}</p>
+                    <div className="bg-card border border-border rounded-xl p-4">
+                      <p className="text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">{detail.description}</p>
+                    </div>
+                  </div>
+                </>
+              )}
+              <div className="flex gap-2 p-4 pt-2">
                 <Button variant="outline" className="flex-1" onClick={() => { setEdit(detail); setDetail(null); }}>
                   <Edit2 className="h-4 w-4 mr-1" /> {T("Edit")}
                 </Button>
@@ -795,7 +789,7 @@ function RecipeForm({ initial, categories, onSubmit, busy }: { initial: any; cat
           onChange={handleFileChange}
         />
       </div>
-      <div><Label>{T("Deskripsi")}</Label><Textarea rows={3} value={description} onChange={(e) => setDescription(e.target.value)} placeholder={T("Bahan, langkah memasak...")} /></div>
+      <div><Label>{T("Deskripsi")}</Label><Textarea rows={20} className="min-h-[400px]" value={description} onChange={(e) => setDescription(e.target.value)} placeholder={T("Bahan, langkah memasak...")} /></div>
       <Button type="submit" className="w-full" disabled={busy}>{T("Simpan")}</Button>
     </form>
   );

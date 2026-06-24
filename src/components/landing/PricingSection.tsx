@@ -42,6 +42,7 @@ const plans = [
       "Semua fitur Starter",
       "Tagihan & laporan pengeluaran",
       "Hutang piutang keluarga",
+      "Kolektif atau Iuran",
       "Tugas harian unlimited",
       "Resep unlimited",
       "Wishlist keluarga",

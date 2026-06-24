@@ -455,7 +455,8 @@ function ResepListPage() {
                 value={formDescription}
                 onChange={(e) => setFormDescription(e.target.value)}
                 placeholder={T("Bahan, langkah, dsb...")}
-                rows={5}
+                rows={20}
+                className="min-h-[400px]"
               />
             </div>
           </div>

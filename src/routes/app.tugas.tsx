@@ -106,6 +106,8 @@ function TugasPage() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["daily-tasks-all", familyId] });
       qc.invalidateQueries({ queryKey: ["daily-tasks", familyId] });
+      // Update feed agar realtime (exact:false karena queryKey feed punya filter tambahan)
+      qc.invalidateQueries({ queryKey: ["feed", familyId], exact: false });
     },
   });
 

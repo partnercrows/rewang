@@ -5,12 +5,12 @@ import { useLang } from "@/hooks/useLang";
 import { useSubscriptionGate } from "@/hooks/useSubscriptionGate";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { initials, cn } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
 import { id as idLocale } from "date-fns/locale";
 import { enUS } from "date-fns/locale";
-import { Calendar as CalendarIcon, Filter, X, RotateCcw, Lock } from "lucide-react";
+import { Calendar as CalendarIcon, Filter, X, RotateCcw, Lock, Loader2, RefreshCw } from "lucide-react";
 import { type DateRange } from "react-day-picker";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -97,6 +97,62 @@ function FeedPage() {
 
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [selectedMember, setSelectedMember] = useState<string | null>(null);
+  const [pullDistance, setPullDistance] = useState(0);
+  const [isPulling, setIsPulling] = useState(false);
+  const touchStartY = useRef(0);
+  const pullRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLElement | null>(null);
+
+  // Find scrollable main element inside MainLayout
+  useEffect(() => {
+    if (pullRef.current) {
+      scrollContainerRef.current = pullRef.current.closest("main") as HTMLElement | null;
+    }
+  }, []);
+
+  const handleRefresh = useCallback(() => {
+    qc.invalidateQueries({ queryKey: ["feed", familyId] });
+  }, [qc, familyId]);
+
+  // Pull-to-refresh touch handlers
+  useEffect(() => {
+    const el = scrollContainerRef.current;
+    if (!el) return;
+
+    const onTouchStart = (e: TouchEvent) => {
+      if (el.scrollTop <= 0 && e.touches.length === 1) {
+        touchStartY.current = e.touches[0].clientY;
+        setIsPulling(true);
+      }
+    };
+
+    const onTouchMove = (e: TouchEvent) => {
+      if (!isPulling) return;
+      const dy = e.touches[0].clientY - touchStartY.current;
+      if (dy > 0 && el.scrollTop <= 0) {
+        // Damping: max 80px pull distance
+        setPullDistance(Math.min(dy * 0.4, 80));
+      }
+    };
+
+    const onTouchEnd = () => {
+      if (pullDistance > 50) {
+        handleRefresh();
+      }
+      setPullDistance(0);
+      setIsPulling(false);
+    };
+
+    el.addEventListener("touchstart", onTouchStart, { passive: false });
+    el.addEventListener("touchmove", onTouchMove, { passive: false });
+    el.addEventListener("touchend", onTouchEnd);
+
+    return () => {
+      el.removeEventListener("touchstart", onTouchStart);
+      el.removeEventListener("touchmove", onTouchMove);
+      el.removeEventListener("touchend", onTouchEnd);
+    };
+  }, [isPulling, pullDistance, handleRefresh]);
 
   // Fetch family members for filter
   const { data: members = [] } = useQuery({
@@ -115,7 +171,7 @@ function FeedPage() {
   // Avatar lookup map from members
   const avatarMap = new Map(members.map((m: any) => [m.id, m.avatar_url]));
 
-  const { data: feed = [], isLoading } = useQuery({
+  const { data: feed = [], isLoading, isFetching } = useQuery({
     queryKey: ["feed", familyId, dateRange?.from?.toISOString(), dateRange?.to?.toISOString(), selectedMember],
     enabled: !!familyId,
     queryFn: async () => {
@@ -152,6 +208,13 @@ function FeedPage() {
           qc.invalidateQueries({ queryKey: ["feed", familyId] });
         },
       )
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "activity_feed", filter: `family_id=eq.${familyId}` },
+        () => {
+          qc.invalidateQueries({ queryKey: ["feed", familyId] });
+        },
+      )
       .subscribe();
     return () => {
       supabase.removeChannel(ch);
@@ -161,9 +224,23 @@ function FeedPage() {
   return (
     <MainLayout>
       <header className="flex items-center justify-between mb-4">
-        <div>
+        <div className="min-w-0">
           <h1 className="text-2xl font-bold tracking-tight">{T("Aktivitas Keluarga")}</h1>
           <p className="text-xs text-muted-foreground mt-0.5">{T("Semua aktivitas anggota keluarga")}</p>
+        </div>
+        <div className="flex items-center gap-1 shrink-0">
+          {isFetching && (
+            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+          )}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 rounded-xl"
+            onClick={() => qc.invalidateQueries({ queryKey: ["feed", familyId] })}
+            title={T("Refresh") as string}
+          >
+            <RotateCcw className="h-4 w-4" />
+          </Button>
         </div>
       </header>
 
@@ -257,7 +334,16 @@ function FeedPage() {
         )}
       </div>
 
+      {/* --- Pull-to-refresh indicator --- */}
+      <div
+        className="flex items-center justify-center overflow-hidden transition-all duration-200"
+        style={{ height: pullDistance, opacity: pullDistance > 0 ? 1 : 0 }}
+      >
+        <RefreshCw className={cn("h-5 w-5 text-muted-foreground", pullDistance > 50 && "animate-spin")} />
+      </div>
+
       {/* --- Feed list --- */}
+      <div ref={pullRef}>
       {isLoading ? (
         <div className="space-y-2">
           {Array.from({ length: 5 }).map((_, i) => (
@@ -286,6 +372,7 @@ function FeedPage() {
           ))}
         </div>
       )}
+      </div>
 
       <div className="h-20" />
     </MainLayout>

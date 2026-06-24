@@ -55,7 +55,10 @@ export const supabase = new Proxy({} as SupabaseClient<Database>, {
       }
       return undefined;
     }
-    return Reflect.get(_supabase, prop, receiver);
+    const value = Reflect.get(_supabase, prop, receiver);
+    // Bind function properties so `this` always points to the real _supabase client.
+    // This is critical for methods like channel(), removeChannel(), etc. that rely
+    // on internal this context for Realtime subscriptions.
+    return typeof value === 'function' ? value.bind(_supabase) : value;
   },
 });
-
