@@ -5,8 +5,8 @@ const bgColor = "#ffffff";
 
 mkdirSync("public", { recursive: true });
 
-// Read the actual logo SVG
-const svgBuffer = readFileSync("public/rewang.svg");
+// Read the actual logo (PNG source - the Rewang Mobile app icon)
+const svgBuffer = readFileSync("public/rewang.png");
 
 const icons = [
   // Maskable icons: logo must sit inside safe zone (~60% of canvas)
@@ -50,4 +50,4 @@ await sharp(svgBuffer)
   .toFile("public/favicon.ico");
 console.log("✔  public/favicon.ico  (48×48)");
 
-console.log("All PWA icons generated successfully from rewang.svg.");
+console.log("All PWA icons generated successfully from rewang.png.");

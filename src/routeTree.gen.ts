@@ -11,6 +11,8 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
+import { Route as OldRouteImport } from './routes/old'
+import { Route as OauthredirectRouteImport } from './routes/oauthredirect'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as KebijakanRouteImport } from './routes/kebijakan'
 import { Route as AppRouteImport } from './routes/app'
@@ -35,6 +37,16 @@ const SignupRoute = SignupRouteImport.update({
 const OnboardingRoute = OnboardingRouteImport.update({
   id: '/onboarding',
   path: '/onboarding',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OldRoute = OldRouteImport.update({
+  id: '/old',
+  path: '/old',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OauthredirectRoute = OauthredirectRouteImport.update({
+  id: '/oauthredirect',
+  path: '/oauthredirect',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -120,6 +132,8 @@ export interface FileRoutesByFullPath {
   '/app': typeof AppRouteWithChildren
   '/kebijakan': typeof KebijakanRoute
   '/login': typeof LoginRoute
+  '/oauthredirect': typeof OauthredirectRoute
+  '/old': typeof OldRoute
   '/onboarding': typeof OnboardingRoute
   '/signup': typeof SignupRoute
   '/app/akun': typeof AppAkunRoute
@@ -138,6 +152,8 @@ export interface FileRoutesByTo {
   '/aktivasi': typeof AktivasiRoute
   '/kebijakan': typeof KebijakanRoute
   '/login': typeof LoginRoute
+  '/oauthredirect': typeof OauthredirectRoute
+  '/old': typeof OldRoute
   '/onboarding': typeof OnboardingRoute
   '/signup': typeof SignupRoute
   '/app/akun': typeof AppAkunRoute
@@ -158,6 +174,8 @@ export interface FileRoutesById {
   '/app': typeof AppRouteWithChildren
   '/kebijakan': typeof KebijakanRoute
   '/login': typeof LoginRoute
+  '/oauthredirect': typeof OauthredirectRoute
+  '/old': typeof OldRoute
   '/onboarding': typeof OnboardingRoute
   '/signup': typeof SignupRoute
   '/app/akun': typeof AppAkunRoute
@@ -179,6 +197,8 @@ export interface FileRouteTypes {
     | '/app'
     | '/kebijakan'
     | '/login'
+    | '/oauthredirect'
+    | '/old'
     | '/onboarding'
     | '/signup'
     | '/app/akun'
@@ -197,6 +217,8 @@ export interface FileRouteTypes {
     | '/aktivasi'
     | '/kebijakan'
     | '/login'
+    | '/oauthredirect'
+    | '/old'
     | '/onboarding'
     | '/signup'
     | '/app/akun'
@@ -216,6 +238,8 @@ export interface FileRouteTypes {
     | '/app'
     | '/kebijakan'
     | '/login'
+    | '/oauthredirect'
+    | '/old'
     | '/onboarding'
     | '/signup'
     | '/app/akun'
@@ -236,6 +260,8 @@ export interface RootRouteChildren {
   AppRoute: typeof AppRouteWithChildren
   KebijakanRoute: typeof KebijakanRoute
   LoginRoute: typeof LoginRoute
+  OauthredirectRoute: typeof OauthredirectRoute
+  OldRoute: typeof OldRoute
   OnboardingRoute: typeof OnboardingRoute
   SignupRoute: typeof SignupRoute
 }
@@ -254,6 +280,20 @@ declare module '@tanstack/react-router' {
       path: '/onboarding'
       fullPath: '/onboarding'
       preLoaderRoute: typeof OnboardingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/old': {
+      id: '/old'
+      path: '/old'
+      fullPath: '/old'
+      preLoaderRoute: typeof OldRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/oauthredirect': {
+      id: '/oauthredirect'
+      path: '/oauthredirect'
+      fullPath: '/oauthredirect'
+      preLoaderRoute: typeof OauthredirectRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -407,6 +447,8 @@ const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRouteWithChildren,
   KebijakanRoute: KebijakanRoute,
   LoginRoute: LoginRoute,
+  OauthredirectRoute: OauthredirectRoute,
+  OldRoute: OldRoute,
   OnboardingRoute: OnboardingRoute,
   SignupRoute: SignupRoute,
 }
