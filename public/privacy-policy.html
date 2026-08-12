@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kebijakan Privasi — Rewang</title>
+<style>
+  :root {
+    --accent: #36816F;
+    --accent-dark: #235348;
+    --text-primary: #1F2937;
+    --text-secondary: #4B5563;
+    --bg: #FAFAF9;
+    --card-bg: #FFFFFF;
+    --border: #E5E7EB;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --accent: #4FA593;
+      --accent-dark: #7CC9B9;
+      --text-primary: #F1F5F3;
+      --text-secondary: #B8C2BE;
+      --bg: #14181A;
+      --card-bg: #1D2224;
+      --border: #2C3335;
+    }
+  }
+  :root[data-theme="dark"] {
+    --accent: #4FA593;
+    --accent-dark: #7CC9B9;
+    --text-primary: #F1F5F3;
+    --text-secondary: #B8C2BE;
+    --bg: #14181A;
+    --card-bg: #1D2224;
+    --border: #2C3335;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text-primary);
+    line-height: 1.65;
+  }
+  header {
+    background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+    color: #fff;
+    padding: 48px 24px 40px;
+    text-align: center;
+  }
+  header h1 {
+    margin: 0 0 8px;
+    font-size: 1.75rem;
+    letter-spacing: -0.02em;
+  }
+  header p {
+    margin: 0;
+    opacity: 0.9;
+    font-size: 0.95rem;
+  }
+  main {
+    max-width: 720px;
+    margin: -24px auto 48px;
+    padding: 0 20px;
+  }
+  .card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 32px 28px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.06);
+  }
+  .principle {
+    background: rgba(54,129,111,0.08);
+    border-left: 3px solid var(--accent);
+    border-radius: 8px;
+    padding: 16px 18px;
+    margin: 8px 0 28px;
+    font-size: 0.98rem;
+  }
+  h2 {
+    font-size: 1.15rem;
+    color: var(--accent-dark);
+    margin: 32px 0 10px;
+    letter-spacing: -0.01em;
+  }
+  h3 {
+    font-size: 1rem;
+    margin: 20px 0 8px;
+    color: var(--text-primary);
+  }
+  p, li {
+    color: var(--text-secondary);
+    font-size: 0.96rem;
+  }
+  ul {
+    padding-left: 20px;
+    margin: 8px 0;
+  }
+  li { margin-bottom: 6px; }
+  a { color: var(--accent-dark); }
+  strong { color: var(--text-primary); }
+  .meta {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin-bottom: 0;
+  }
+  footer {
+    text-align: center;
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+    padding: 0 20px 40px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Kebijakan Privasi</h1>
+  <p>Rewang — Aplikasi Manajemen Rumah Tangga</p>
+</header>
+
+<main>
+  <div class="card">
+    <p class="meta"><strong>Berlaku efektif:</strong> 13 Juli 2026</p>
+
+    <p>Rewang ("kami", "aplikasi ini") adalah aplikasi manajemen rumah tangga (keuangan, tagihan, hutang/piutang, belanja, kolektif keluarga) yang dikembangkan oleh <strong>Susilo Eko Nurcahyo</strong>. Kebijakan ini menjelaskan data apa yang dikumpulkan aplikasi ini, bagaimana data itu digunakan, dan hak Anda atas data tersebut.</p>
+
+    <h2>Prinsip Utama</h2>
+    <div class="principle">
+      <strong>Rewang tidak memiliki server sendiri.</strong> Semua data rumah tangga Anda (transaksi kas, tagihan, hutang/piutang, stok belanja, resep, kegiatan kolektif) tersimpan <strong>di perangkat Anda sendiri</strong> (terenkripsi) dan disinkronkan ke <strong>spreadsheet Google Sheets milik Anda sendiri</strong> di akun Google Drive Anda — bukan ke server milik kami. Kami tidak pernah bisa mengakses, melihat, atau menyimpan data rumah tangga Anda di tempat lain.
+    </div>
+
+    <h2>Data yang Dikumpulkan</h2>
+
+    <h3>1. Informasi Akun Google</h3>
+    <p>Saat Anda masuk (sign in) dengan Google, aplikasi menerima:</p>
+    <ul>
+      <li>Nama, alamat email, dan foto profil dasar dari akun Google Anda</li>
+      <li>Token akses terbatas untuk membaca/menulis <strong>satu file spreadsheet</strong> yang dibuat oleh aplikasi ini sendiri di Google Drive Anda</li>
+    </ul>
+    <p>Kami menggunakan izin (scope) <code>drive.file</code> — bentuk izin Google Drive yang <strong>paling terbatas</strong>: aplikasi ini hanya bisa mengakses file yang dibuatnya sendiri (<code>RewangAppData</code>), dan <strong>tidak pernah</strong> bisa melihat, mengubah, atau menghapus file/foto/dokumen lain apa pun di Google Drive pribadi Anda.</p>
+
+    <h3>2. Data Rumah Tangga</h3>
+    <p>Data yang Anda masukkan sendiri ke aplikasi (transaksi kas, tagihan, catatan hutang/piutang, daftar belanja, resep, kegiatan kolektif, agenda, kontak keluarga) disimpan:</p>
+    <ul>
+      <li><strong>Secara lokal</strong> di perangkat Anda, terenkripsi (AES-256)</li>
+      <li><strong>Disinkronkan</strong> ke spreadsheet Google Sheets milik Anda sendiri (bukan milik kami), supaya bisa dipakai bersama anggota keluarga yang login dengan akun Google yang sama</li>
+    </ul>
+
+    <h3>3. Data Perangkat</h3>
+    <p>Untuk keperluan teknis (mis. notifikasi pengingat tagihan lokal), aplikasi dapat menyimpan informasi minimal terkait perangkat Anda secara lokal. Kami tidak mengumpulkan data lokasi, kontak di luar yang Anda masukkan manual, atau riwayat penelusuran.</p>
+
+    <h2>Bagaimana Data Digunakan</h2>
+    <p>Data yang Anda masukkan <strong>hanya</strong> digunakan untuk menjalankan fitur aplikasi itu sendiri (menampilkan saldo, mengingatkan tagihan, dll). Kami <strong>tidak</strong>:</p>
+    <ul>
+      <li>Menjual atau membagikan data Anda ke pihak ketiga mana pun</li>
+      <li>Menggunakan data Anda untuk iklan</li>
+      <li>Memiliki akses ke data rumah tangga Anda dari sisi kami — data tersebut sepenuhnya berada di perangkat dan Google Drive Anda sendiri</li>
+    </ul>
+
+    <h2>Berbagi Data dengan Anggota Keluarga</h2>
+    <p>Saat ini, berbagi data antar anggota keluarga bekerja dengan cara: setiap anggota keluarga masuk menggunakan <strong>akun Google yang sama</strong> di perangkat masing-masing, sehingga semua mengakses spreadsheet yang sama. Ini berarti anggota keluarga yang menggunakan akun yang sama dapat melihat seluruh data rumah tangga yang tersimpan.</p>
+
+    <h2>Penyimpanan Pihak Ketiga</h2>
+    <p>Data Anda disinkronkan ke <strong>Google Drive/Google Sheets</strong>, yang dioperasikan oleh Google LLC dan tunduk pada <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Kebijakan Privasi Google</a> miliknya sendiri. Karena data disimpan di akun Google Anda sendiri (bukan akun milik kami), Anda memiliki kendali penuh atasnya melalui pengaturan Google Drive Anda.</p>
+
+    <h2>Keamanan</h2>
+    <ul>
+      <li>Data lokal di perangkat dienkripsi menggunakan AES-256, dengan kunci enkripsi tersimpan aman menggunakan mekanisme keamanan bawaan sistem operasi (Android Keystore / iOS Keychain via <code>expo-secure-store</code>)</li>
+      <li>Komunikasi dengan Google API menggunakan koneksi terenkripsi (HTTPS)</li>
+    </ul>
+
+    <h2>Hak Anda</h2>
+    <ul>
+      <li><strong>Mencabut akses</strong>: Anda dapat mencabut akses aplikasi ini ke akun Google Anda kapan saja melalui <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener">Google Account Permissions</a></li>
+      <li><strong>Menghapus data</strong>: Anda dapat menghapus spreadsheet <code>RewangAppData</code> langsung dari Google Drive Anda, dan/atau menghapus data lokal melalui fitur Logout di dalam aplikasi</li>
+      <li><strong>Portabilitas data</strong>: Karena data Anda ada di spreadsheet Google Sheets milik Anda sendiri, Anda bebas mengekspor, mencadangkan, atau memindahkan data tersebut kapan saja tanpa bergantung pada kami</li>
+    </ul>
+
+    <h2>Pembelian Dalam Aplikasi (In-App Purchase)</h2>
+    <p>Fitur premium dibeli melalui Google Play Billing. Kami tidak menyimpan atau memproses informasi kartu pembayaran Anda — seluruh proses pembayaran ditangani oleh Google Play sesuai kebijakan privasi Google Play.</p>
+
+    <h2>Privasi Anak</h2>
+    <p>Aplikasi ini tidak ditujukan untuk anak di bawah 13 tahun dan tidak secara sengaja mengumpulkan data dari anak-anak.</p>
+
+    <h2>Perubahan Kebijakan</h2>
+    <p>Kami dapat memperbarui kebijakan privasi ini dari waktu ke waktu. Perubahan akan diumumkan melalui pembaruan aplikasi.</p>
+
+    <h2>Kontak</h2>
+    <p>Jika ada pertanyaan mengenai kebijakan privasi ini, hubungi: <strong><a href="mailto:susiloekon@gmail.com">susiloekon@gmail.com</a></strong></p>
+  </div>
+</main>
+
+<footer>
+  &copy; 2026 Rewang. Seluruh hak cipta dilindungi.
+</footer>
+
+</body>
+</html>
