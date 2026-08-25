@@ -1,11 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { DownloadHeader } from "@/components/landing/DownloadHeader";
 import { DownloadHero } from "@/components/landing/DownloadHero";
-import { ProblemSection } from "@/components/landing/ProblemSection";
-import { BenefitSection } from "@/components/landing/BenefitSection";
-import { ProductShowcase } from "@/components/landing/ProductShowcase";
-import { TrustSection } from "@/components/landing/TrustSection";
-import { HowItWorks } from "@/components/landing/HowItWorks";
+import { FeatureGrid } from "@/components/landing/FeatureGrid";
 import { ClosingCTA } from "@/components/landing/ClosingCTA";
 import { Footer } from "@/components/landing/Footer";
 
@@ -26,11 +22,7 @@ function DownloadPage() {
       <DownloadHeader />
       <main>
         <DownloadHero />
-        <ProblemSection />
-        <BenefitSection />
-        <ProductShowcase />
-        <TrustSection />
-        <HowItWorks />
+        <FeatureGrid />
         <ClosingCTA />
       </main>
       <Footer />

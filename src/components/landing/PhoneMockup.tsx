@@ -4,6 +4,8 @@ interface PhoneMockupProps {
   className?: string;
   imgClassName?: string;
   objectPosition?: string;
+  /** Tailwind aspect class (e.g. "aspect-[9/17]") to crop screenshots to a uniform height. */
+  aspectClass?: string;
 }
 
 export function PhoneMockup({
@@ -12,6 +14,7 @@ export function PhoneMockup({
   className = "",
   imgClassName = "",
   objectPosition,
+  aspectClass,
 }: PhoneMockupProps) {
   return (
     <div className={`relative w-full ${className}`}>
@@ -22,7 +25,11 @@ export function PhoneMockup({
             src={src}
             alt={alt}
             draggable={false}
-            className={`block w-full h-auto ${imgClassName}`}
+            className={
+              aspectClass
+                ? `block w-full ${aspectClass} object-cover object-top ${imgClassName}`
+                : `block w-full h-auto ${imgClassName}`
+            }
             style={objectPosition ? { objectPosition } : undefined}
           />
         </div>
