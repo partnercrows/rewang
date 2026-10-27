@@ -1,7 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { DownloadHeader } from "@/components/landing/DownloadHeader";
-import { DownloadHero } from "@/components/landing/DownloadHero";
-import { FeatureGrid } from "@/components/landing/FeatureGrid";
+import { Hero } from "@/components/landing/Hero";
+import { FeaturesBento } from "@/components/landing/FeaturesBento";
+import { Achievements } from "@/components/landing/Achievements";
+import { Steps } from "@/components/landing/Steps";
+import { Privacy } from "@/components/landing/Privacy";
+import { FAQ } from "@/components/landing/FAQ";
 import { ClosingCTA } from "@/components/landing/ClosingCTA";
 import { Footer } from "@/components/landing/Footer";
 
@@ -9,7 +12,7 @@ export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       {
-        title: "Rewang - Biar Urusan Rumah, Nggak Jadi Beban Pikiran",
+        title: "Rewang — Aplikasi urusan rumah tangga keluarga",
       },
     ],
   }),
@@ -18,11 +21,14 @@ export const Route = createFileRoute("/")({
 
 function DownloadPage() {
   return (
-    <div className="min-h-screen bg-[#fef9ef] font-body">
-      <DownloadHeader />
+    <div className="min-h-screen bg-[#F8F5EC] font-body text-[#14211E]">
       <main>
-        <DownloadHero />
-        <FeatureGrid />
+        <Hero />
+        <FeaturesBento />
+        <Achievements />
+        <Steps />
+        <Privacy />
+        <FAQ />
         <ClosingCTA />
       </main>
       <Footer />
