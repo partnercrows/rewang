@@ -3,198 +3,498 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light dark">
+<meta name="description" content="Kebijakan Privasi Rewang: data rumah tanggamu tersimpan di HP dan Google Drive-mu sendiri, bukan di server kami. Baca data apa yang diproses, izin yang diminta, dan hakmu.">
 <title>Kebijakan Privasi — Rewang</title>
+<link rel="icon" href="/favicon.ico">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
 <style>
   :root {
-    --accent: #36816F;
-    --accent-dark: #235348;
-    --text-primary: #1F2937;
-    --text-secondary: #4B5563;
-    --bg: #FAFAF9;
-    --card-bg: #FFFFFF;
-    --border: #E5E7EB;
+    --bg: #F7F4EC;
+    --card: #FFFFFF;
+    --ink: #14211E;
+    --muted: #5A645F;
+    --accent: #2F7A68;
+    --accent-ink: #1F5E4F;
+    --deep: #0E2A24;
+    --deep-2: #17463B;
+    --gold: #F2C94C;
+    --gold-ink: #7A5B00;
+    --soft: #DDEDE7;
+    --amber-bg: #FBEFD3;
+    --amber-ink: #6E4B00;
+    --border: #E6E1D4;
+    --shadow: 0 1px 2px rgba(20,33,30,.06), 0 10px 28px rgba(20,33,30,.07);
+    --radius: 24px;
   }
   @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) {
+    :root {
+      --bg: #0C1714;
+      --card: #14241F;
+      --ink: #EAF2EE;
+      --muted: #A7B9B2;
       --accent: #4FA593;
-      --accent-dark: #7CC9B9;
-      --text-primary: #F1F5F3;
-      --text-secondary: #B8C2BE;
-      --bg: #14181A;
-      --card-bg: #1D2224;
-      --border: #2C3335;
+      --accent-ink: #8ED3C2;
+      --soft: #1B3029;
+      --amber-bg: #2E2410;
+      --amber-ink: #F2D38A;
+      --border: #25382F;
+      --shadow: 0 1px 2px rgba(0,0,0,.4), 0 10px 28px rgba(0,0,0,.35);
     }
   }
-  :root[data-theme="dark"] {
-    --accent: #4FA593;
-    --accent-dark: #7CC9B9;
-    --text-primary: #F1F5F3;
-    --text-secondary: #B8C2BE;
-    --bg: #14181A;
-    --card-bg: #1D2224;
-    --border: #2C3335;
-  }
   * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; scroll-padding-top: 88px; }
   body {
     margin: 0;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    font-family: 'Figtree', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
     background: var(--bg);
-    color: var(--text-primary);
-    line-height: 1.65;
+    color: var(--ink);
+    line-height: 1.7;
+    font-size: 16px;
+    -webkit-font-smoothing: antialiased;
   }
-  header {
-    background: linear-gradient(135deg, var(--accent), var(--accent-dark));
-    color: #fff;
-    padding: 48px 24px 40px;
-    text-align: center;
+  h1, h2, h3 { font-family: 'Outfit', 'Figtree', system-ui, sans-serif; letter-spacing: -0.02em; line-height: 1.15; margin: 0; }
+  a { color: var(--accent-ink); text-underline-offset: 3px; }
+  a:hover { text-decoration-thickness: 2px; }
+  :focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; border-radius: 8px; }
+  .skip { position: absolute; left: -999px; top: 8px; background: var(--gold); color: #14211E; padding: 10px 16px; border-radius: 12px; font-weight: 700; z-index: 100; }
+  .skip:focus { left: 12px; }
+  .i { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+
+  /* Bilah atas */
+  .bar { position: sticky; top: 0; z-index: 50; background: color-mix(in srgb, var(--bg) 82%, transparent); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border-bottom: 1px solid var(--border); }
+  .bar-in { max-width: 1120px; margin: 0 auto; padding: 10px 20px; display: flex; align-items: center; gap: 14px; }
+  .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--ink); font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 20px; letter-spacing: -0.02em; }
+  .brand img { width: 34px; height: 34px; border-radius: 10px; }
+  .bar nav { margin-left: auto; display: flex; gap: 6px; }
+  .bar nav a { text-decoration: none; font-weight: 700; font-size: 14px; padding: 9px 14px; border-radius: 999px; color: var(--ink); }
+  .bar nav a:hover { background: var(--soft); }
+  .bar nav a.cta { background: var(--deep); color: #fff; }
+  .bar nav a.cta:hover { background: var(--deep-2); }
+  @media (max-width: 560px) { .bar nav a:not(.cta) { display: none; } }
+
+  /* Hero */
+  .hero {
+    position: relative; overflow: hidden; color: #fff;
+    background:
+      radial-gradient(90% 70% at 100% 0%, rgba(242,201,76,.20) 0%, rgba(242,201,76,0) 55%),
+      linear-gradient(155deg, var(--deep) 0%, var(--deep-2) 58%, #2F7A68 100%);
+    padding: 56px 20px 110px;
   }
-  header h1 {
-    margin: 0 0 8px;
-    font-size: 1.75rem;
-    letter-spacing: -0.02em;
+  .hero-in { max-width: 1120px; margin: 0 auto; position: relative; z-index: 1; }
+  .tile { width: 56px; height: 56px; border-radius: 18px; display: grid; place-items: center; color: var(--gold); background: linear-gradient(135deg, #2F7A68, #0E2A24); box-shadow: 0 12px 26px rgba(0,0,0,.35); transform: rotate(-4deg); border: 1px solid rgba(255,255,255,.14); }
+  .tile .i { width: 28px; height: 28px; }
+  .kicker { margin: 22px 0 8px; font-size: 13px; font-weight: 800; letter-spacing: .14em; color: var(--gold); }
+  .hero h1 { font-size: clamp(36px, 6.4vw, 62px); font-weight: 800; max-width: 14ch; }
+  .hero h1 .dot { color: var(--gold); }
+  .lead { max-width: 56ch; margin: 18px 0 0; font-size: clamp(16px, 2vw, 19px); color: rgba(255,255,255,.88); }
+  .meta { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 24px; }
+  .chip { display: inline-flex; align-items: center; gap: 8px; padding: 7px 14px; border-radius: 999px; font-size: 13px; font-weight: 700; background: rgba(255,255,255,.10); border: 1px solid rgba(255,255,255,.18); color: #fff; }
+  .hero-art { position: absolute; right: -30px; bottom: -10px; width: min(520px, 62vw); opacity: .9; z-index: 0; pointer-events: none; }
+  @media (max-width: 720px) { .hero-art { opacity: .35; right: -80px; } .hero { padding-bottom: 96px; } }
+
+  /* Ringkasan 3 kartu */
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 0 20px; }
+  .glance { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-top: -64px; position: relative; z-index: 2; }
+  @media (max-width: 860px) { .glance { grid-template-columns: 1fr; margin-top: -56px; } }
+  .g { background: var(--card); border-radius: var(--radius); padding: 20px 22px; box-shadow: var(--shadow); border: 1px solid var(--border); display: flex; gap: 14px; align-items: flex-start; }
+  .g .ic { width: 46px; height: 46px; border-radius: 15px; display: grid; place-items: center; background: var(--soft); color: var(--accent-ink); flex-shrink: 0; }
+  .g h2 { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+  .g p { margin: 0; color: var(--muted); font-size: 15px; line-height: 1.55; }
+
+  /* Tata letak isi */
+  .layout { display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 40px; margin: 48px auto 64px; align-items: start; }
+  .layout > aside { align-self: stretch; }
+  @media (max-width: 960px) { .layout { grid-template-columns: 1fr; gap: 20px; } }
+  .toc { position: sticky; top: 88px; background: var(--card); border: 1px solid var(--border); border-radius: 20px; padding: 14px; box-shadow: var(--shadow); max-height: calc(100vh - 110px); overflow: auto; }
+  .toc h2 { font-size: 13px; letter-spacing: .12em; font-weight: 800; color: var(--muted); margin: 6px 10px 8px; font-family: 'Figtree', sans-serif; text-transform: uppercase; }
+  .toc ol { list-style: none; margin: 0; padding: 0; counter-reset: t; }
+  .toc li { counter-increment: t; }
+  .toc a { display: flex; gap: 10px; align-items: baseline; padding: 8px 10px; border-radius: 12px; text-decoration: none; color: var(--ink); font-size: 14.5px; font-weight: 600; line-height: 1.35; }
+  .toc a::before { content: counter(t); font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 12px; color: var(--accent-ink); min-width: 18px; }
+  .toc a:hover { background: var(--soft); }
+  .toc a.on { background: var(--deep); color: #fff; }
+  .toc a.on::before { color: var(--gold); }
+  details.toc-m { display: none; }
+  @media (max-width: 960px) {
+    .toc { display: none; }
+    details.toc-m { display: block; background: var(--card); border: 1px solid var(--border); border-radius: 18px; box-shadow: var(--shadow); }
+    details.toc-m summary { cursor: pointer; padding: 14px 18px; font-weight: 800; font-family: 'Outfit', sans-serif; list-style: none; display: flex; justify-content: space-between; align-items: center; }
+    details.toc-m summary::-webkit-details-marker { display: none; }
+    details.toc-m summary::after { content: '+'; font-size: 22px; color: var(--accent-ink); }
+    details.toc-m[open] summary::after { content: '−'; }
+    details.toc-m ol { margin: 0; padding: 0 10px 12px; list-style: none; counter-reset: t; }
+    details.toc-m li { counter-increment: t; }
+    details.toc-m a { display: flex; gap: 10px; padding: 10px 12px; border-radius: 12px; text-decoration: none; color: var(--ink); font-weight: 600; font-size: 15px; }
+    details.toc-m a::before { content: counter(t); font-family: 'Outfit', sans-serif; font-weight: 800; color: var(--accent-ink); min-width: 20px; }
   }
-  header p {
-    margin: 0;
-    opacity: 0.9;
-    font-size: 0.95rem;
+
+  /* Bagian */
+  article { min-width: 0; display: grid; gap: 18px; }
+  section.s { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 30px 32px; box-shadow: var(--shadow); }
+  @media (max-width: 560px) { section.s { padding: 24px 20px; border-radius: 20px; } }
+  .s-head { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }
+  .s-ic { width: 46px; height: 46px; border-radius: 15px; display: grid; place-items: center; color: var(--gold); background: linear-gradient(135deg, #2F7A68, #0E2A24); transform: rotate(-4deg); box-shadow: 0 8px 18px rgba(14,42,36,.25); flex-shrink: 0; }
+  .s-head h2 { font-size: clamp(22px, 3vw, 28px); font-weight: 800; }
+  .s-head small { display: block; font-family: 'Figtree', sans-serif; font-size: 12px; letter-spacing: .12em; font-weight: 800; color: var(--accent-ink); margin-bottom: 3px; }
+  section.s p { margin: 10px 0; color: var(--muted); }
+  section.s p strong, section.s li strong { color: var(--ink); }
+  section.s ul { margin: 10px 0; padding-left: 0; list-style: none; display: grid; gap: 10px; }
+  section.s li { position: relative; padding-left: 30px; color: var(--muted); }
+  section.s li::before { content: ''; position: absolute; left: 4px; top: .55em; width: 12px; height: 12px; border-radius: 4px; background: var(--accent); transform: rotate(45deg) scale(.8); }
+  ul.no li::before { background: #C2453B; transform: none; border-radius: 50%; width: 10px; height: 10px; left: 5px; }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .88em; background: var(--soft); color: var(--accent-ink); padding: 2px 7px; border-radius: 7px; }
+  .note, .warn { border-radius: 18px; padding: 16px 18px; margin: 16px 0 4px; display: flex; gap: 12px; align-items: flex-start; }
+  .note { background: var(--soft); color: var(--ink); border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent); }
+  .warn { background: var(--amber-bg); color: var(--amber-ink); border: 1px solid color-mix(in srgb, var(--gold) 55%, transparent); }
+  .note .i, .warn .i { margin-top: 3px; }
+  .note p, .warn p { margin: 0 !important; color: inherit !important; font-size: 15px; }
+  .note strong, .warn strong { color: inherit !important; }
+
+  /* Tabel responsif (jadi kartu di layar kecil) */
+  .tbl { width: 100%; border-collapse: separate; border-spacing: 0; margin: 14px 0 4px; font-size: 15px; }
+  .tbl th { text-align: left; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); padding: 0 14px 10px; font-weight: 800; }
+  .tbl td { padding: 14px; vertical-align: top; border-top: 1px solid var(--border); color: var(--muted); }
+  .tbl td:first-child { color: var(--ink); font-weight: 700; width: 26%; }
+  .tbl td b { color: var(--ink); }
+  @media (max-width: 700px) {
+    .tbl thead { display: none; }
+    .tbl, .tbl tbody, .tbl tr, .tbl td { display: block; width: 100% !important; }
+    .tbl tr { border: 1px solid var(--border); border-radius: 18px; padding: 6px 4px; margin-bottom: 12px; background: color-mix(in srgb, var(--soft) 35%, transparent); }
+    .tbl td { border: 0; padding: 8px 14px; }
+    .tbl td::before { content: attr(data-label); display: block; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; font-weight: 800; color: var(--accent-ink); margin-bottom: 2px; }
+    .tbl td:first-child::before { display: none; }
+    .tbl td:first-child { font-size: 16px; padding-top: 12px; }
   }
-  main {
-    max-width: 720px;
-    margin: -24px auto 48px;
-    padding: 0 20px;
-  }
-  .card {
-    background: var(--card-bg);
-    border: 1px solid var(--border);
-    border-radius: 16px;
-    padding: 32px 28px;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.06);
-  }
-  .principle {
-    background: rgba(54,129,111,0.08);
-    border-left: 3px solid var(--accent);
-    border-radius: 8px;
-    padding: 16px 18px;
-    margin: 8px 0 28px;
-    font-size: 0.98rem;
-  }
-  h2 {
-    font-size: 1.15rem;
-    color: var(--accent-dark);
-    margin: 32px 0 10px;
-    letter-spacing: -0.01em;
-  }
-  h3 {
-    font-size: 1rem;
-    margin: 20px 0 8px;
-    color: var(--text-primary);
-  }
-  p, li {
-    color: var(--text-secondary);
-    font-size: 0.96rem;
-  }
-  ul {
-    padding-left: 20px;
-    margin: 8px 0;
-  }
-  li { margin-bottom: 6px; }
-  a { color: var(--accent-dark); }
-  strong { color: var(--text-primary); }
-  .meta {
-    font-size: 0.85rem;
-    color: var(--text-secondary);
-    margin-bottom: 0;
-  }
-  footer {
-    text-align: center;
-    font-size: 0.82rem;
-    color: var(--text-secondary);
-    padding: 0 20px 40px;
-  }
+
+  /* Tombol & penutup */
+  .btn { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; font-weight: 800; padding: 14px 22px; border-radius: 16px; background: var(--gold); color: #14211E; box-shadow: 0 8px 20px rgba(242,201,76,.35); }
+  .btn:hover { filter: brightness(1.04); }
+  .btn.alt { background: transparent; color: var(--accent-ink); border: 2px solid var(--accent); box-shadow: none; }
+  .actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 18px; }
+  .contact { background: linear-gradient(155deg, var(--deep), var(--deep-2)); border: 0; color: #fff; }
+  .contact .s-head h2 { color: #fff; }
+  .contact p, .contact li { color: rgba(255,255,255,.86) !important; }
+  .contact a:not(.btn) { color: var(--gold); }
+  footer { background: var(--deep); color: rgba(255,255,255,.78); padding: 36px 20px 44px; }
+  .foot { max-width: 1120px; margin: 0 auto; display: flex; flex-wrap: wrap; gap: 18px 36px; align-items: center; justify-content: space-between; font-size: 14px; }
+  .foot a { color: #fff; font-weight: 600; }
+  .foot nav { display: flex; gap: 22px; flex-wrap: wrap; }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+  @media print { .bar, .toc, details.toc-m, .hero-art, .actions { display: none !important; } .hero { background: none; color: #000; padding: 0 0 12px; } .hero h1, .lead, .chip, .kicker { color: #000 !important; } section.s { box-shadow: none; break-inside: avoid; } }
 </style>
 </head>
 <body>
 
-<header>
-  <h1>Kebijakan Privasi</h1>
-  <p>Rewang — Aplikasi Manajemen Rumah Tangga</p>
+<!-- Ikon (sprite) -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 4.5-3.5 8-8 9-4.5-1-8-4.5-8-9V6z"/><path d="M9 12l2 2 4-4"/></symbol>
+    <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></symbol>
+    <symbol id="i-server" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/><path d="M7 7.5h.01M7 16.5h.01M3 3l18 18"/></symbol>
+    <symbol id="i-db" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v6c0 1.7 3.6 3 8 3s8-1.3 8-3V5M4 11v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/></symbol>
+    <symbol id="i-cloud" viewBox="0 0 24 24"><path d="M7 18a4 4 0 0 1-.6-7.96A6 6 0 0 1 18 9a4.5 4.5 0 0 1 .5 9z"/></symbol>
+    <symbol id="i-key" viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M16 7l3 3"/></symbol>
+    <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c1-3.5 3.5-5 6.5-5s5.5 1.5 6.5 5"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 15c2 .6 3.2 2.3 3.5 5"/></symbol>
+    <symbol id="i-phone" viewBox="0 0 24 24"><rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.5h2"/></symbol>
+    <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20a2 2 0 0 0 4 0"/></symbol>
+    <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></symbol>
+    <symbol id="i-plug" viewBox="0 0 24 24"><path d="M9 3v5M15 3v5M6 8h12v3a6 6 0 0 1-12 0zM12 17v4"/></symbol>
+    <symbol id="i-scale" viewBox="0 0 24 24"><path d="M12 3v18M7 21h10M5 7h14M5 7l-3 7a3 3 0 0 0 6 0zM19 7l-3 7a3 3 0 0 0 6 0z"/></symbol>
+    <symbol id="i-smile" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8.5 14a4 4 0 0 0 7 0M9 9.5h.01M15 9.5h.01"/></symbol>
+    <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/></symbol>
+    <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.5-4.5L4 8M4 4v4h4"/><path d="M4 13a8 8 0 0 0 14.5 4.5L20 16M20 20v-4h-4"/></symbol>
+    <symbol id="i-mail" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M3.5 7.5 12 13l8.5-5.5"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></symbol>
+    <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8v.5"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 3l10 18H2z"/><path d="M12 10v5M12 18v.5"/></symbol>
+    <symbol id="i-home" viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></symbol>
+  </defs>
+</svg>
+
+<a class="skip" href="#isi">Lompat ke isi</a>
+
+<header class="bar">
+  <div class="bar-in">
+    <a class="brand" href="/" aria-label="Rewang, beranda">
+      <img src="/rewang.png" alt="" width="34" height="34">
+      Rewang
+    </a>
+    <nav aria-label="Pintasan">
+      <a href="/">Beranda</a>
+      <a href="/hapus-akun.html">Hapus akun</a>
+      <a class="cta" href="mailto:susiloekon@gmail.com">Hubungi kami</a>
+    </nav>
+  </div>
 </header>
 
-<main>
-  <div class="card">
-    <p class="meta"><strong>Berlaku efektif:</strong> 13 Juli 2026</p>
+<section class="hero" aria-labelledby="judul">
+  <svg class="hero-art" viewBox="0 0 520 300" fill="none" aria-hidden="true">
+    <defs>
+      <linearGradient id="gw" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFE27A"/><stop offset="1" stop-color="#F2C94C"/></linearGradient>
+    </defs>
+    <circle cx="410" cy="70" r="120" fill="#F2C94C" opacity=".10"/>
+    <circle cx="410" cy="70" r="70" fill="#F2C94C" opacity=".10"/>
+    <path d="M60 300V170l110-84 110 84v130z" fill="#0A1F1A" opacity=".55"/>
+    <path d="M40 172 170 72l130 100" stroke="#8ED3C2" stroke-opacity=".5" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    <rect x="130" y="196" width="44" height="52" rx="8" fill="url(#gw)"/>
+    <rect x="196" y="196" width="44" height="52" rx="8" fill="url(#gw)" opacity=".55"/>
+    <rect x="150" y="256" width="40" height="44" rx="6" fill="#0A1F1A"/>
+    <path d="M330 300v-90l70-52 70 52v90z" fill="#0A1F1A" opacity=".4"/>
+    <rect x="388" y="214" width="26" height="34" rx="6" fill="url(#gw)" opacity=".8"/>
+    <path d="M0 296h520" stroke="#8ED3C2" stroke-opacity=".25" stroke-width="2"/>
+  </svg>
+  <div class="hero-in">
+    <div class="tile" aria-hidden="true"><svg class="i"><use href="#i-shield"/></svg></div>
+    <p class="kicker">KEBIJAKAN PRIVASI</p>
+    <h1 id="judul">Data rumahmu, tetap milikmu<span class="dot">.</span></h1>
+    <p class="lead">Rewang tidak punya server untuk menyimpan catatan rumah tanggamu. Semuanya ada di HP dan di Google Drive-mu sendiri. Halaman ini menjelaskan, dengan bahasa sehari-hari, data apa yang diproses, untuk apa, dan apa yang bisa kamu lakukan.</p>
+    <div class="meta">
+      <span class="chip"><svg class="i" style="width:16px;height:16px"><use href="#i-refresh"/></svg>Berlaku sejak 10 November 2026</span>
+      <span class="chip"><svg class="i" style="width:16px;height:16px"><use href="#i-user"/></svg>Pengembang: Susilo Eko Nurcahyo</span>
+    </div>
+  </div>
+</section>
 
-    <p>Rewang ("kami", "aplikasi ini") adalah aplikasi manajemen rumah tangga (keuangan, tagihan, hutang/piutang, belanja, kolektif keluarga) yang dikembangkan oleh <strong>Susilo Eko Nurcahyo</strong>. Kebijakan ini menjelaskan data apa yang dikumpulkan aplikasi ini, bagaimana data itu digunakan, dan hak Anda atas data tersebut.</p>
+<main id="isi">
+  <div class="wrap">
 
-    <h2>Prinsip Utama</h2>
-    <div class="principle">
-      <strong>Rewang tidak memiliki server sendiri.</strong> Semua data rumah tangga Anda (transaksi kas, tagihan, hutang/piutang, stok belanja, resep, kegiatan kolektif) tersimpan <strong>di perangkat Anda sendiri</strong> (terenkripsi) dan disinkronkan ke <strong>spreadsheet Google Sheets milik Anda sendiri</strong> di akun Google Drive Anda — bukan ke server milik kami. Kami tidak pernah bisa mengakses, melihat, atau menyimpan data rumah tangga Anda di tempat lain.
+    <div class="glance" aria-label="Ringkasan singkat">
+      <div class="g">
+        <span class="ic"><svg class="i"><use href="#i-server"/></svg></span>
+        <div><h2>Tanpa server data</h2><p>Kami tidak menyimpan, melihat, atau menjual catatan rumah tanggamu.</p></div>
+      </div>
+      <div class="g">
+        <span class="ic"><svg class="i"><use href="#i-cloud"/></svg></span>
+        <div><h2>Di Drive-mu</h2><p>Data tersinkron ke Google Sheets milikmu sendiri, bukan milik kami.</p></div>
+      </div>
+      <div class="g">
+        <span class="ic"><svg class="i"><use href="#i-key"/></svg></span>
+        <div><h2>Kamu yang pegang kendali</h2><p>Cabut akses, keluar dari keluarga, atau hapus akun dan data kapan saja.</p></div>
+      </div>
     </div>
 
-    <h2>Data yang Dikumpulkan</h2>
+    <div class="layout">
+      <aside aria-label="Daftar isi">
+        <nav class="toc" aria-label="Daftar isi">
+          <h2>Daftar isi</h2>
+          <ol id="toc-list">
+            <li><a href="#siapa">Siapa kami</a></li>
+            <li><a href="#prinsip">Prinsip utama</a></li>
+            <li><a href="#data">Data yang diproses</a></li>
+            <li><a href="#google">Izin Google</a></li>
+            <li><a href="#keluarga">Berbagi dengan keluarga</a></li>
+            <li><a href="#izin-hp">Izin di HP</a></li>
+            <li><a href="#penggunaan">Cara data dipakai</a></li>
+            <li><a href="#keamanan">Keamanan &amp; penyimpanan</a></li>
+            <li><a href="#pihak-ketiga">Layanan pihak ketiga</a></li>
+            <li><a href="#hak">Hak &amp; kendali kamu</a></li>
+            <li><a href="#anak">Privasi anak</a></li>
+            <li><a href="#situs">Situs web ini</a></li>
+            <li><a href="#perubahan">Perubahan kebijakan</a></li>
+            <li><a href="#kontak">Kontak</a></li>
+          </ol>
+        </nav>
+        <details class="toc-m">
+          <summary>Daftar isi</summary>
+          <ol>
+            <li><a href="#siapa">Siapa kami</a></li>
+            <li><a href="#prinsip">Prinsip utama</a></li>
+            <li><a href="#data">Data yang diproses</a></li>
+            <li><a href="#google">Izin Google</a></li>
+            <li><a href="#keluarga">Berbagi dengan keluarga</a></li>
+            <li><a href="#izin-hp">Izin di HP</a></li>
+            <li><a href="#penggunaan">Cara data dipakai</a></li>
+            <li><a href="#keamanan">Keamanan &amp; penyimpanan</a></li>
+            <li><a href="#pihak-ketiga">Layanan pihak ketiga</a></li>
+            <li><a href="#hak">Hak &amp; kendali kamu</a></li>
+            <li><a href="#anak">Privasi anak</a></li>
+            <li><a href="#situs">Situs web ini</a></li>
+            <li><a href="#perubahan">Perubahan kebijakan</a></li>
+            <li><a href="#kontak">Kontak</a></li>
+          </ol>
+        </details>
+      </aside>
 
-    <h3>1. Informasi Akun Google</h3>
-    <p>Saat Anda masuk (sign in) dengan Google, aplikasi menerima:</p>
-    <ul>
-      <li>Nama, alamat email, dan foto profil dasar dari akun Google Anda</li>
-      <li>Token akses terbatas untuk membaca/menulis <strong>satu file spreadsheet</strong> yang dibuat oleh aplikasi ini sendiri di Google Drive Anda</li>
-    </ul>
-    <p>Kami menggunakan izin (scope) <code>drive.file</code> — bentuk izin Google Drive yang <strong>paling terbatas</strong>: aplikasi ini hanya bisa mengakses file yang dibuatnya sendiri (<code>RewangAppData</code>), dan <strong>tidak pernah</strong> bisa melihat, mengubah, atau menghapus file/foto/dokumen lain apa pun di Google Drive pribadi Anda.</p>
+      <article>
 
-    <h3>2. Data Rumah Tangga</h3>
-    <p>Data yang Anda masukkan sendiri ke aplikasi (transaksi kas, tagihan, catatan hutang/piutang, daftar belanja, resep, kegiatan kolektif, agenda, kontak keluarga) disimpan:</p>
-    <ul>
-      <li><strong>Secara lokal</strong> di perangkat Anda, terenkripsi (AES-256)</li>
-      <li><strong>Disinkronkan</strong> ke spreadsheet Google Sheets milik Anda sendiri (bukan milik kami), supaya bisa dipakai bersama anggota keluarga yang login dengan akun Google yang sama</li>
-    </ul>
+        <section class="s" id="siapa">
+          <div class="s-head"><span class="s-ic"><svg class="i"><use href="#i-user"/></svg></span><div><small>01</small><h2>Siapa kami</h2></div></div>
+          <p>Rewang adalah aplikasi asisten rumah tangga: kas, tagihan, hutang/piutang, kolektif keluarga, stok belanja, resep, agenda, tugas, catatan, aset, dan impian. Rewang dikembangkan dan dikelola oleh <strong>Susilo Eko Nurcahyo</strong> (pengembang perorangan). Di halaman ini, “kami” berarti pengembang Rewang dan “kamu” berarti pengguna aplikasi.</p>
+          <p>Kebijakan ini berlaku untuk aplikasi Rewang di Android. Dengan memakai Rewang, kamu setuju dengan cara data diproses seperti yang dijelaskan di sini.</p>
+        </section>
 
-    <h3>3. Data Perangkat</h3>
-    <p>Untuk keperluan teknis (mis. notifikasi pengingat tagihan lokal), aplikasi dapat menyimpan informasi minimal terkait perangkat Anda secara lokal. Kami tidak mengumpulkan data lokasi, kontak di luar yang Anda masukkan manual, atau riwayat penelusuran.</p>
+        <section class="s" id="prinsip">
+          <div class="s-head"><span class="s-ic"><svg class="i"><use href="#i-server"/></svg></span><div><small>02</small><h2>Prinsip utama</h2></div></div>
+          <div class="note"><svg class="i"><use href="#i-shield"/></svg><p><strong>Rewang tidak punya server untuk data rumah tanggamu.</strong> Catatan kas, tagihan, stok, dan lainnya tersimpan terenkripsi di HP-mu dan disinkronkan ke spreadsheet Google Sheets di Google Drive milikmu sendiri. Kami tidak bisa membuka, membaca, atau menyalinnya.</p></div>
+          <p>Satu-satunya data yang meninggalkan HP-mu menuju pihak lain adalah yang dijelaskan di bagian <a href="#data">Data yang diproses</a> dan <a href="#pihak-ketiga">Layanan pihak ketiga</a>.</p>
+        </section>
 
-    <h2>Bagaimana Data Digunakan</h2>
-    <p>Data yang Anda masukkan <strong>hanya</strong> digunakan untuk menjalankan fitur aplikasi itu sendiri (menampilkan saldo, mengingatkan tagihan, dll). Kami <strong>tidak</strong>:</p>
-    <ul>
-      <li>Menjual atau membagikan data Anda ke pihak ketiga mana pun</li>
-      <li>Menggunakan data Anda untuk iklan</li>
-      <li>Memiliki akses ke data rumah tangga Anda dari sisi kami — data tersebut sepenuhnya berada di perangkat dan Google Drive Anda sendiri</li>
-    </ul>
+        <section class="s" id="data">
+          <div class="s-head"><span class="s-ic"><svg class="i"><use href="#i-db"/></svg></span><div><small>03</small><h2>Data yang diproses</h2></div></div>
+          <p>Berikut semua jenis data yang dipakai Rewang, untuk apa, dan di mana disimpan.</p>
+          <table class="tbl">
+            <thead><tr><th>Data</th><th>Untuk apa</th><th>Disimpan di mana</th></tr></thead>
+            <tbody>
+              <tr><td>Akun Google</td><td data-label="Untuk apa">Nama, alamat email, foto profil Google, dan ID akun. Dipakai untuk masuk, menampilkan namamu, dan mengenalimu di keluarga.</td><td data-label="Disimpan di mana">Di HP. Nama dan fotomu juga tampil di riwayat aktivitas dalam spreadsheet keluargamu.</td></tr>
+              <tr><td>Data rumah tangga</td><td data-label="Untuk apa">Kas, tagihan, hutang/piutang, kolektif, stok, resep, agenda, tugas, catatan, aset, dan impian yang kamu masukkan sendiri. Dipakai untuk menjalankan fitur.</td><td data-label="Disimpan di mana">Di HP (terenkripsi) dan di Google Sheets milikmu.</td></tr>
+              <tr><td>Nomor telepon <b>(opsional)</b></td><td data-label="Untuk apa">Di profil, hutang/piutang, peserta kolektif, atau penerima tugas. Dipakai untuk membuka WhatsApp dengan draf pesan pengingat.</td><td data-label="Disimpan di mana">Sama seperti data rumah tangga. Tidak dikirim ke kami.</td></tr>
+              <tr><td>Riwayat aktivitas</td><td data-label="Untuk apa">Siapa melakukan apa dan kapan: nama, foto, nama perangkat, dan deskripsi singkat. Dipakai untuk tab Aktivitas dan koleksi pencapaian.</td><td data-label="Disimpan di mana">Di HP dan di lembar <code>Feed_Log</code> spreadsheet keluargamu. Terlihat oleh semua anggota.</td></tr>
+              <tr><td>Foto</td><td data-label="Untuk apa">Foto profil atau foto resep yang kamu pilih sendiri dari galeri.</td><td data-label="Disimpan di mana">Di HP. Rewang tidak mengunggah fotonya ke mana pun; hanya jalur filenya yang ikut tercatat.</td></tr>
+              <tr><td>Status Premium</td><td data-label="Untuk apa">Tanda bahwa kamu sudah membeli Premium dan token pembeliannya, untuk membuka fitur Premium.</td><td data-label="Disimpan di mana">Di HP. Status Premium (ya atau tidak) juga ditulis ke lembar <code>Setup</code> di spreadsheetmu. Data kartu pembayaran tidak pernah kami lihat.</td></tr>
+              <tr><td>Laporan kesalahan</td><td data-label="Untuk apa">Jejak teknis saat aplikasi error atau crash: versi aplikasi dan Android, model perangkat, dan catatan teknis seperti lama sinkron. Dipakai untuk memperbaiki bug.</td><td data-label="Disimpan di mana">Dikirim ke layanan Sentry (server di Jerman, Uni Eropa). Kami tidak sengaja menyertakan namamu, email, nomor telepon, atau isi catatan rumah tanggamu.</td></tr>
+              <tr><td>Pengaturan aplikasi</td><td data-label="Untuk apa">Tema, warna, ukuran teks, dan pilihan pengingat.</td><td data-label="Disimpan di mana">Di HP saja.</td></tr>
+            </tbody>
+          </table>
+        </section>
 
-    <h2>Berbagi Data dengan Anggota Keluarga</h2>
-    <p>Saat ini, berbagi data antar anggota keluarga bekerja dengan cara: setiap anggota keluarga masuk menggunakan <strong>akun Google yang sama</strong> di perangkat masing-masing, sehingga semua mengakses spreadsheet yang sama. Ini berarti anggota keluarga yang menggunakan akun yang sama dapat melihat seluruh data rumah tangga yang tersimpan.</p>
+        <section class="s" id="google">
+          <div class="s-head"><span class="s-ic"><svg class="i"><use href="#i-cloud"/></svg></span><div><small>04</small><h2>Izin Google</h2></div></div>
+          <p>Rewang meminta satu izin Google: <code>drive.file</code>. Ini bentuk izin Google Drive yang <strong>paling terbatas</strong>. Rewang hanya bisa mengakses file yang dibuatnya sendiri (spreadsheet <code>RewangAppData</code>) atau file yang kamu pilih sendiri lewat pemilih file Google. Rewang <strong>tidak pernah</strong> bisa melihat, mengubah, atau menghapus foto, dokumen, atau file lain di Drive-mu.</p>
+          <p>Saat bergabung ke keluarga, kamu memilih spreadsheet yang dibagikan lewat <strong>Google Picker</strong>. Proses otorisasi Google dikembalikan ke aplikasi lewat halaman <code>rewang.web.id/oauthredirect</code>. Halaman itu hanya meneruskan hasilnya kembali ke aplikasi dan tidak menyimpannya.</p>
+          <div class="note"><svg class="i"><use href="#i-info"/></svg><p>Penggunaan informasi yang diterima dari Google API oleh Rewang mematuhi <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener">Kebijakan Data Pengguna Layanan API Google</a>, termasuk persyaratan Penggunaan Terbatas.</p></div>
+        </section>
 
-    <h2>Penyimpanan Pihak Ketiga</h2>
-    <p>Data Anda disinkronkan ke <strong>Google Drive/Google Sheets</strong>, yang dioperasikan oleh Google LLC dan tunduk pada <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Kebijakan Privasi Google</a> miliknya sendiri. Karena data disimpan di akun Google Anda sendiri (bukan akun milik kami), Anda memiliki kendali penuh atasnya melalui pengaturan Google Drive Anda.</p>
+        <section class="s" id="keluarga">
+          <div class="s-head"><span class="s-ic"><svg class="i"><use href="#i-users"/></svg></span><div><small>05</small><h2>Berbagi dengan keluarga</h2></div></div>
+          <p>Rewang bisa dipakai bersama pasangan atau keluarga. Cara kerjanya: pemilik mengundang anggota lewat alamat email Google mereka. Setiap orang memakai <strong>akun Google masing-masing</strong>, dan semua bekerja di spreadsheet yang sama.</p>
+          <ul>
+            <li>Semua anggota melihat <strong>seluruh data</strong> di spreadsheet keluarga, termasuk nama, email, dan foto anggota lain, serta riwayat aktivitas.</li>
+            <li>Nama yang kamu pakai di profil akan tampil di riwayat aktivitas anggota lain.</li>
+            <li>Pemilik bisa mengeluarkan anggota atau memindahkan kepemilikan. Anggota bisa keluar sendiri kapan saja.</li>
+            <li>Kalau pemilik menghapus spreadsheet keluarga, semua anggota kehilangan data bersama itu.</li>
+          </ul>
+          <div class="warn"><svg class="i"><use href="#i-alert"/></svg><p><strong>Undang hanya orang yang kamu percaya.</strong> Anggota bisa melihat semua catatan keluarga, termasuk keuangan.</p></div>
+        </section>
 
-    <h2>Keamanan</h2>
-    <ul>
-      <li>Data lokal di perangkat dienkripsi menggunakan AES-256, dengan kunci enkripsi tersimpan aman menggunakan mekanisme keamanan bawaan sistem operasi (Android Keystore / iOS Keychain via <code>expo-secure-store</code>)</li>
-      <li>Komunikasi dengan Google API menggunakan koneksi terenkripsi (HTTPS)</li>
-    </ul>
+        <section class="s" id="izin-hp">
+          <div class="s-head"><span class="s-ic"><svg class="i"><use href="#i-phone"/></svg></span><div><small>06</small><h2>Izin di HP</h2></div></div>
+          <table class="tbl">
+            <thead><tr><th>Izin</th><th>Untuk apa</th><th>Wajib?</th></tr></thead>
+            <tbody>
+              <tr><td>Notifikasi</td><td data-label="Untuk apa">Menampilkan pengingat tagihan, stok, agenda, dan tugas.</td><td data-label="Wajib?">Tidak. Bisa dimatikan per jenis di Akun › Pengingat.</td></tr>
+              <tr><td>Alarm &amp; pengingat tepat waktu</td><td data-label="Untuk apa">Supaya pengingat bunyi tepat pada jamnya.</td><td data-label="Wajib?">Tidak. Tanpa izin ini pengingat tetap jalan, tapi bisa kurang tepat waktu.</td></tr>
+              <tr><td>Mulai saat HP menyala</td><td data-label="Untuk apa">Menjadwalkan ulang pengingat setelah HP dinyalakan ulang.</td><td data-label="Wajib?">Otomatis.</td></tr>
+              <tr><td>Internet &amp; status jaringan</td><td data-label="Untuk apa">Masuk dengan Google dan sinkron ke spreadsheetmu. Aplikasi tetap bisa dipakai tanpa internet.</td><td data-label="Wajib?">Untuk sinkron.</td></tr>
+              <tr><td>Getar &amp; tetap aktif sebentar</td><td data-label="Untuk apa">Getar notifikasi dan menyelesaikan sinkron di latar belakang.</td><td data-label="Wajib?">Otomatis.</td></tr>
+              <tr><td>Pilih foto</td><td data-label="Untuk apa">Memilih foto profil atau foto resep lewat pemilih foto Android. Kamu memilih sendiri; Rewang tidak membaca foto lain.</td><td data-label="Wajib?">Tidak.</td></tr>
+              <tr><td>Google Play Billing</td><td data-label="Untuk apa">Pembelian Premium.</td><td data-label="Wajib?">Hanya bila kamu membeli.</td></tr>
+            </tbody>
+          </table>
+          <p>Rewang tidak memakai lokasi, kontak telepon, SMS, atau mikrofon, dan tidak merekam suara maupun layar.</p>
+        </section>
 
-    <h2>Hak Anda</h2>
-    <ul>
-      <li><strong>Mencabut akses</strong>: Anda dapat mencabut akses aplikasi ini ke akun Google Anda kapan saja melalui <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener">Google Account Permissions</a></li>
-      <li><strong>Menghapus data</strong>: Anda dapat menghapus spreadsheet <code>RewangAppData</code> langsung dari Google Drive Anda, dan/atau menghapus data lokal melalui fitur Logout di dalam aplikasi</li>
-      <li><strong>Portabilitas data</strong>: Karena data Anda ada di spreadsheet Google Sheets milik Anda sendiri, Anda bebas mengekspor, mencadangkan, atau memindahkan data tersebut kapan saja tanpa bergantung pada kami</li>
-    </ul>
+        <section class="s" id="penggunaan">
+          <div class="s-head"><span class="s-ic"><svg class="i"><use href="#i-eye"/></svg></span><div><small>07</small><h2>Cara data dipakai</h2></div></div>
+          <p>Data yang kamu masukkan <strong>hanya</strong> dipakai untuk menjalankan fitur Rewang: menghitung saldo, mengingatkan tagihan, menyusun daftar belanja, dan sebagainya. Kami <strong>tidak</strong>:</p>
+          <ul class="no">
+            <li>menjual atau membagikan datamu ke pihak mana pun untuk kepentingan mereka;</li>
+            <li>menampilkan iklan atau membangun profil iklan tentangmu;</li>
+            <li>memasang pelacak perilaku atau alat analitik di aplikasi;</li>
+            <li>mengakses data rumah tanggamu dari sisi kami, karena memang tidak ada salinannya pada kami.</li>
+          </ul>
+        </section>
 
-    <h2>Pembelian Dalam Aplikasi (In-App Purchase)</h2>
-    <p>Fitur premium dibeli melalui Google Play Billing. Kami tidak menyimpan atau memproses informasi kartu pembayaran Anda — seluruh proses pembayaran ditangani oleh Google Play sesuai kebijakan privasi Google Play.</p>
+        <section class="s" id="keamanan">
+          <div class="s-head"><span class="s-ic"><svg class="i"><use href="#i-lock"/></svg></span><div><small>08</small><h2>Keamanan &amp; penyimpanan</h2></div></div>
+          <ul>
+            <li>Data di HP dienkripsi dengan <strong>AES-256</strong>. Kunci enkripsinya disimpan di penyimpanan aman bawaan Android (Keystore).</li>
+            <li>Semua komunikasi dengan Google memakai koneksi terenkripsi (HTTPS).</li>
+            <li>Saat <strong>Logout</strong>, aplikasi menyinkronkan datamu lebih dulu, lalu menghapus data lokal dari HP. Datamu tetap aman di spreadsheetmu.</li>
+            <li><strong>Cadangan manual</strong> (Akun › Data &amp; cadangan) menghasilkan file milikmu sendiri. Simpan dan bagikan dengan hati-hati, karena isinya data rumah tanggamu.</li>
+            <li>Data tetap ada selama kamu menyimpannya. Laporan kesalahan di Sentry disimpan terbatas sesuai pengaturan retensi Sentry.</li>
+          </ul>
+          <p>Tidak ada sistem yang seratus persen aman. Jaga juga akun Google dan HP-mu: kunci layar, jangan bagikan akses, dan keluar dari akun di HP yang hilang.</p>
+        </section>
 
-    <h2>Privasi Anak</h2>
-    <p>Aplikasi ini tidak ditujukan untuk anak di bawah 13 tahun dan tidak secara sengaja mengumpulkan data dari anak-anak.</p>
+        <section class="s" id="pihak-ketiga">
+          <div class="s-head"><span class="s-ic"><svg class="i"><use href="#i-plug"/></svg></span><div><small>09</small><h2>Layanan pihak ketiga</h2></div></div>
+          <table class="tbl">
+            <thead><tr><th>Layanan</th><th>Fungsi</th><th>Kebijakan</th></tr></thead>
+            <tbody>
+              <tr><td>Google</td><td data-label="Fungsi">Masuk dengan Google, Google Drive, Google Sheets, dan Google Picker.</td><td data-label="Kebijakan"><a href="https://policies.google.com/privacy" target="_blank" rel="noopener">policies.google.com/privacy</a></td></tr>
+              <tr><td>Google Play</td><td data-label="Fungsi">Distribusi aplikasi dan pembayaran Premium. Kami tidak menyimpan atau memproses data kartumu.</td><td data-label="Kebijakan"><a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Kebijakan Google</a></td></tr>
+              <tr><td>WhatsApp</td><td data-label="Fungsi">Hanya saat kamu mengetuk tombol pengingat: Rewang membuka WhatsApp dengan draf pesan (misalnya nama dan nominal). Pesan baru terkirim kalau kamu menekan kirim di WhatsApp.</td><td data-label="Kebijakan"><a href="https://www.whatsapp.com/legal/privacy-policy" target="_blank" rel="noopener">whatsapp.com/legal</a></td></tr>
+              <tr><td>Sentry</td><td data-label="Fungsi">Menerima laporan kesalahan teknis agar bug bisa diperbaiki.</td><td data-label="Kebijakan"><a href="https://sentry.io/privacy/" target="_blank" rel="noopener">sentry.io/privacy</a></td></tr>
+            </tbody>
+          </table>
+        </section>
 
-    <h2>Perubahan Kebijakan</h2>
-    <p>Kami dapat memperbarui kebijakan privasi ini dari waktu ke waktu. Perubahan akan diumumkan melalui pembaruan aplikasi.</p>
+        <section class="s" id="hak">
+          <div class="s-head"><span class="s-ic"><svg class="i"><use href="#i-scale"/></svg></span><div><small>10</small><h2>Hak &amp; kendali kamu</h2></div></div>
+          <p>Datamu ada di tanganmu. Kamu bisa kapan saja:</p>
+          <ul>
+            <li><strong>Melihat dan mengubah</strong> datamu langsung di aplikasi atau di spreadsheetmu.</li>
+            <li><strong>Mengekspor</strong> datamu: lewat cadangan di Akun › Data &amp; cadangan, atau menyalin spreadsheet dari Google Drive.</li>
+            <li><strong>Keluar dari keluarga</strong> lewat Akun › Kelola Anggota Workspace.</li>
+            <li><strong>Mencabut akses</strong> Rewang di <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener">pengaturan akun Google</a>.</li>
+            <li><strong>Menghapus akun dan data</strong>: di aplikasi, buka Akun lalu ketuk <em>Hapus akun &amp; data</em>. Kamu bisa memilih apakah file di Google Drive ikut dihapus. Tanpa aplikasi, ajukan lewat <a href="/hapus-akun.html">halaman hapus akun</a>.</li>
+          </ul>
+          <p>Sesuai Undang-Undang Pelindungan Data Pribadi (UU No. 27 Tahun 2022), kamu berhak mengakses, memperbaiki, menghapus, menarik persetujuan, dan mengajukan keberatan atas pemrosesan datamu. Hubungi kami di <a href="mailto:susiloekon@gmail.com">susiloekon@gmail.com</a>; permintaan diproses paling lambat 30 hari.</p>
+          <div class="actions"><a class="btn" href="/hapus-akun.html"><svg class="i"><use href="#i-trash"/></svg>Hapus akun &amp; data</a></div>
+        </section>
 
-    <h2>Kontak</h2>
-    <p>Jika ada pertanyaan mengenai kebijakan privasi ini, hubungi: <strong><a href="mailto:susiloekon@gmail.com">susiloekon@gmail.com</a></strong></p>
+        <section class="s" id="anak">
+          <div class="s-head"><span class="s-ic"><svg class="i"><use href="#i-smile"/></svg></span><div><small>11</small><h2>Privasi anak</h2></div></div>
+          <p>Rewang tidak ditujukan untuk anak di bawah 13 tahun dan tidak sengaja mengumpulkan data dari mereka. Kalau kamu tahu ada anak yang memakainya tanpa pendampingan orang tua, hubungi kami agar datanya dapat dihapus.</p>
+        </section>
+
+        <section class="s" id="situs">
+          <div class="s-head"><span class="s-ic"><svg class="i"><use href="#i-globe"/></svg></span><div><small>12</small><h2>Situs web ini</h2></div></div>
+          <p>Halaman ini statis dan tidak memasang cookie pelacak maupun alat analitik. Halaman ini memuat font dari Google Fonts, sehingga Google dapat melihat alamat IP pengunjung seperti pada situs web lain yang memakai font tersebut.</p>
+        </section>
+
+        <section class="s" id="perubahan">
+          <div class="s-head"><span class="s-ic"><svg class="i"><use href="#i-refresh"/></svg></span><div><small>13</small><h2>Perubahan kebijakan</h2></div></div>
+          <p>Kebijakan ini bisa diperbarui seiring Rewang berkembang. Tanggal “Berlaku sejak” di bagian atas selalu menunjukkan versi terbaru. Kalau ada perubahan penting, misalnya data baru yang dikumpulkan, kami umumkan lewat pembaruan aplikasi.</p>
+        </section>
+
+        <section class="s contact" id="kontak">
+          <div class="s-head"><span class="s-ic"><svg class="i"><use href="#i-mail"/></svg></span><div><small style="color:var(--gold)">14</small><h2>Kontak</h2></div></div>
+          <p>Ada pertanyaan soal privasi, atau ingin menggunakan hakmu? Tulis saja. Kami baca sendiri.</p>
+          <div class="actions">
+            <a class="btn" href="mailto:susiloekon@gmail.com"><svg class="i"><use href="#i-mail"/></svg>susiloekon@gmail.com</a>
+            <a class="btn alt" href="/hapus-akun.html" style="color:#fff;border-color:rgba(255,255,255,.5)">Hapus akun</a>
+          </div>
+        </section>
+
+      </article>
+    </div>
   </div>
 </main>
 
 <footer>
-  &copy; 2026 Rewang. Seluruh hak cipta dilindungi.
+  <div class="foot">
+    <span>&copy; 2026 Rewang. Dibuat untuk rumah-rumah di Indonesia.</span>
+    <nav aria-label="Tautan kaki">
+      <a href="/">Beranda</a>
+      <a href="/privacy-policy.html">Kebijakan Privasi</a>
+      <a href="/hapus-akun.html">Hapus akun</a>
+    </nav>
+  </div>
 </footer>
 
+<script>
+  // Menandai bagian yang sedang dibaca di daftar isi. Halaman tetap berfungsi penuh tanpa skrip ini.
+  (function () {
+    var links = document.querySelectorAll('#toc-list a');
+    if (!('IntersectionObserver' in window) || !links.length) return;
+    var byId = {};
+    links.forEach(function (a) { byId[a.getAttribute('href').slice(1)] = a; });
+    var obs = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (e.isIntersecting) {
+          links.forEach(function (a) { a.classList.remove('on'); a.removeAttribute('aria-current'); });
+          var a = byId[e.target.id];
+          if (a) { a.classList.add('on'); a.setAttribute('aria-current', 'true'); }
+        }
+      });
+    }, { rootMargin: '-96px 0px -65% 0px' });
+    Object.keys(byId).forEach(function (id) { var el = document.getElementById(id); if (el) obs.observe(el); });
+  })();
+</script>
 </body>
 </html>

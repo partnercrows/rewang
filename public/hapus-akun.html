@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hapus Akun — Rewang</title>
+<style>
+  :root {
+    --accent: #36816F;
+    --accent-dark: #235348;
+    --text-primary: #1F2937;
+    --text-secondary: #4B5563;
+    --bg: #FAFAF9;
+    --card-bg: #FFFFFF;
+    --border: #E5E7EB;
+    --danger: #A9342D;
+    --danger-bg: #FCF1EF;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text-primary);
+    line-height: 1.65;
+  }
+  header {
+    background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+    color: #fff;
+    padding: 48px 24px 40px;
+    text-align: center;
+  }
+  header h1 { margin: 0 0 8px; font-size: 1.75rem; letter-spacing: -0.02em; }
+  header p { margin: 0; opacity: 0.9; font-size: 0.95rem; }
+  main { max-width: 720px; margin: -24px auto 48px; padding: 0 20px; }
+  .card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.06);
+    margin-bottom: 20px;
+  }
+  .back { display: inline-block; margin: 0 0 12px; font-size: 0.9rem; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.35); }
+  .kicker { font-size: 0.75rem; font-weight: 800; letter-spacing: 0.1em; color: var(--accent-dark); margin: 0; }
+  h2 { font-size: 1.3rem; margin: 2px 0 14px; letter-spacing: -0.01em; }
+  p, li, label, .hint { color: var(--text-secondary); font-size: 0.96rem; }
+  a { color: var(--accent-dark); }
+  strong { color: var(--text-primary); }
+  .steps { list-style: none; padding: 0; margin: 0; counter-reset: s; }
+  .steps li { counter-increment: s; display: flex; gap: 12px; align-items: flex-start; margin-bottom: 12px; }
+  .steps li::before {
+    content: counter(s);
+    flex-shrink: 0; width: 26px; height: 26px; border-radius: 8px;
+    background: var(--accent-dark); color: #fff; font-weight: 700; font-size: 0.85rem;
+    display: flex; align-items: center; justify-content: center; margin-top: 1px;
+  }
+  .chip { display: inline-block; background: #EEF3F1; border-radius: 6px; padding: 0 7px; font-weight: 700; color: var(--accent-dark); }
+  .field { display: block; margin-bottom: 16px; }
+  .field > span { display: block; font-weight: 700; color: var(--text-primary); margin-bottom: 6px; font-size: 0.92rem; }
+  .req { color: var(--danger); }
+  input[type=email], select {
+    width: 100%; height: 48px; padding: 0 14px; font-size: 1rem; font-family: inherit;
+    border: 1.5px solid #D6D0C2; border-radius: 12px; background: #fff; color: var(--text-primary);
+  }
+  input:focus, select:focus { outline: 3px solid #DDEDE7; border-color: var(--accent); }
+  .drive {
+    display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px; border-radius: 14px;
+    border: 1.5px solid #E6E1D4; background: #fff; cursor: pointer; margin-bottom: 16px;
+  }
+  .drive.on { border-color: var(--danger); background: var(--danger-bg); }
+  .drive input { width: 20px; height: 20px; margin-top: 3px; accent-color: var(--danger); flex-shrink: 0; }
+  .drive b { display: block; color: var(--text-primary); }
+  button.primary {
+    width: 100%; height: 52px; border: 0; border-radius: 14px; background: var(--accent); color: #fff;
+    font-size: 1rem; font-weight: 700; font-family: inherit; cursor: pointer;
+  }
+  button.primary:disabled { background: #B9C9C3; cursor: not-allowed; }
+  button.ghost {
+    height: 44px; padding: 0 18px; border-radius: 12px; border: 1.5px solid var(--accent); background: #fff;
+    color: var(--accent-dark); font-weight: 700; font-family: inherit; cursor: pointer; margin-top: 12px;
+  }
+  .hint { font-size: 0.85rem; margin: 10px 0 0; text-align: center; }
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 14px; }
+  @media (max-width: 640px) { .cols { grid-template-columns: minmax(0, 1fr); } }
+  .tag { display: inline-block; font-size: 0.72rem; font-weight: 800; letter-spacing: 0.08em; border-radius: 999px; padding: 2px 10px; margin-bottom: 8px; }
+  .tag.del { background: var(--danger-bg); color: var(--danger); }
+  .tag.keep { background: #DDEDE7; color: #22604F; }
+  .cols ul { padding-left: 18px; margin: 0; }
+  .cols li { margin-bottom: 8px; }
+  .done { background: #F3F9F6; border: 1.5px solid var(--accent); border-radius: 14px; padding: 16px; }
+  .done h3 { margin: 0 0 4px; color: var(--accent-dark); }
+  .done p { margin: 0; }
+  [hidden] { display: none !important; }
+  footer { text-align: center; font-size: 0.82rem; color: var(--text-secondary); padding: 0 20px 40px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Hapus akun Rewang</h1>
+  <p>Anda bisa menghapus akun kapan saja, lewat aplikasi atau lewat formulir di halaman ini.</p>
+</header>
+
+<main>
+  <a class="back" href="privacy-policy.html">&larr; Kebijakan Privasi</a>
+
+  <section class="card" aria-labelledby="cara-a">
+    <p class="kicker">CARA A · PALING CEPAT</p>
+    <h2 id="cara-a">Di aplikasi</h2>
+    <ol class="steps">
+      <li><span>Buka Rewang, ketuk tab <strong>Akun</strong> di menu bawah.</span></li>
+      <li><span>Gulir ke bawah, ketuk <strong>Hapus akun &amp; data</strong>.</span></li>
+      <li><span>Pilih apakah file di Google Drive ikut dihapus, ketik <span class="chip">HAPUS</span>, lalu ketuk <strong>Hapus akun permanen</strong>.</span></li>
+    </ol>
+  </section>
+
+  <section class="card" aria-labelledby="cara-b">
+    <p class="kicker">CARA B · TANPA APLIKASI</p>
+    <h2 id="cara-b">Lewat formulir</h2>
+
+    <form id="form" novalidate>
+      <label class="field">
+        <span>Email Google yang dipakai di Rewang <span class="req">*</span></span>
+        <input id="email" type="email" inputmode="email" autocomplete="email" placeholder="nama@gmail.com" required>
+      </label>
+
+      <label class="field">
+        <span>Alasan (opsional)</span>
+        <select id="reason">
+          <option value="">Pilih alasan</option>
+          <option>Tidak dipakai lagi</option>
+          <option>Pindah ke aplikasi lain</option>
+          <option>Khawatir soal privasi</option>
+          <option>Lainnya</option>
+        </select>
+      </label>
+
+      <label class="drive" id="driveBox">
+        <input id="delDrive" type="checkbox">
+        <span><b>Hapus juga file Rewang di Drive saya</b>File yang dihapus tidak bisa dipulihkan.</span>
+      </label>
+
+      <button class="primary" id="submit" type="submit" disabled>Isi email Google dulu</button>
+      <p class="hint">Untuk keamanan, kami meminta konfirmasi dari email yang sama sebelum menghapus.</p>
+    </form>
+
+    <div id="sent" class="done" role="status" hidden>
+      <h3>Tinggal satu langkah</h3>
+      <p>Aplikasi email Anda sudah terbuka dengan pesan permintaan yang siap dikirim. Kirim pesan itu dari <strong id="sentEmail"></strong>; permintaan diproses maksimal 30 hari. Kalau email tidak terbuka, kirim manual ke <a href="mailto:susiloekon@gmail.com">susiloekon@gmail.com</a>.</p>
+      <button class="ghost" id="again" type="button">Buat permintaan lain</button>
+    </div>
+  </section>
+
+  <section class="card" aria-labelledby="data">
+    <h2 id="data">Data apa yang dihapus dan disimpan</h2>
+    <div class="cols">
+      <div>
+        <span class="tag del">DIHAPUS</span>
+        <ul>
+          <li>Profil dan keanggotaan workspace keluarga</li>
+          <li>Token akses Google, jadi Rewang tidak bisa lagi membuka Drive Anda</li>
+          <li>File Rewang di Drive, hanya jika Anda mencentangnya</li>
+        </ul>
+      </div>
+      <div>
+        <span class="tag keep">TETAP ADA</span>
+        <ul>
+          <li>Spreadsheet di Google Drive Anda (kecuali dicentang), tetap milik Anda</li>
+          <li>Catatan transaksi pembelian Premium, disimpan Google Play sesuai aturannya</li>
+        </ul>
+      </div>
+    </div>
+    <p>Data rumah tangga Anda memang tidak ada di server kami, tetapi di perangkat dan Google Drive Anda sendiri. Anda juga bisa mencabut izin Rewang kapan saja lewat <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener">pengaturan akun Google</a>.</p>
+  </section>
+
+  <section class="card">
+    <h2>Ada pertanyaan?</h2>
+    <p>Hubungi kami di <a href="mailto:susiloekon@gmail.com">susiloekon@gmail.com</a>, atau baca <a href="privacy-policy.html">Kebijakan Privasi</a>.</p>
+  </section>
+</main>
+
+<footer>&copy; 2026 Rewang. Seluruh hak cipta dilindungi.</footer>
+
+<script>
+(function () {
+  var email = document.getElementById('email');
+  var reason = document.getElementById('reason');
+  var del = document.getElementById('delDrive');
+  var box = document.getElementById('driveBox');
+  var btn = document.getElementById('submit');
+  var form = document.getElementById('form');
+  var sent = document.getElementById('sent');
+  function ok() { return /.+@.+\..+/.test(email.value.trim()); }
+  function refresh() {
+    btn.disabled = !ok();
+    btn.textContent = ok() ? 'Kirim permintaan' : 'Isi email Google dulu';
+    box.className = 'drive' + (del.checked ? ' on' : '');
+  }
+  email.addEventListener('input', refresh);
+  del.addEventListener('change', refresh);
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    if (!ok()) return;
+    var addr = email.value.trim();
+    var body = 'Saya meminta penghapusan akun Rewang.\n\nEmail Google: ' + addr +
+      '\nHapus juga file Rewang di Drive: ' + (del.checked ? 'Ya' : 'Tidak') +
+      (reason.value ? '\nAlasan: ' + reason.value : '') + '\n';
+    document.getElementById('sentEmail').textContent = addr;
+    form.hidden = true;
+    sent.hidden = false;
+    window.location.href = 'mailto:susiloekon@gmail.com?subject=' + encodeURIComponent('Permintaan hapus akun Rewang') + '&body=' + encodeURIComponent(body);
+  });
+  document.getElementById('again').addEventListener('click', function () {
+    form.reset(); form.hidden = false; sent.hidden = true; refresh();
+  });
+  refresh();
+})();
+</script>
+</body>
+</html>
